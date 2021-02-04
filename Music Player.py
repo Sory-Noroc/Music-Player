@@ -1,0 +1,379 @@
+# MP3 Player made by Sory
+# Python 3.6+ required
+# The program was designed in Windows. Fonts differ on Unix OS'es
+
+import os
+import vlc  # version 3.0.10114
+import sqlite3  # 2.60
+from threading import Thread
+from PyQt5 import QtCore, QtGui, QtWidgets
+from tkinter import Tk, filedialog  # 8.6
+from time import sleep
+from datetime import timedelta
+from pygame import mixer  # version 1.9.6
+from PIL import ImageTk,Image  # For images for the buttons
+
+
+class UiMainWindow:
+    width = 15
+
+    def __init__(self, main_window):
+        self.mw = main_window
+        # Next we add the minimize and close buttons to the window
+        self.mw.setWindowFlags(QtCore.Qt.WindowCloseButtonHint | QtCore.Qt.WindowMinimizeButtonHint)
+        mixer.init()  # For the volume
+
+        # Initiating the music player
+        self.vlc_instance = vlc.Instance()
+        self.config_audio()
+
+        # Initializing the GUI
+        self.mw.resize(800, 600)
+        self.centralwidget = QtWidgets.QWidget(self.mw)
+
+        # Initiating the frames, buttons and labels
+        self.centralframe = QtWidgets.QVBoxLayout()
+        self.centralframe.setSpacing(6)
+        self.centralwidget.setLayout(self.centralframe)
+
+        self.button_frame = QtWidgets.QHBoxLayout()
+        self.button_frame.setSpacing(6)
+        self.timer_frame = QtWidgets.QHBoxLayout()
+        self.timer_frame.setSpacing(6)
+        self.volume_frame = QtWidgets.QHBoxLayout()
+        self.volume_frame.setSpacing(6)
+
+        self.play_pause_button = QtWidgets.QPushButton(self.centralwidget)
+        self.stop_button = QtWidgets.QPushButton(self.centralwidget)
+        self.add_new_song_button = QtWidgets.QPushButton(self.centralwidget)
+        self.remove_song_button = QtWidgets.QPushButton(self.centralwidget)
+        self.restart_button = QtWidgets.QPushButton(self.centralwidget)
+        self.next_button = QtWidgets.QPushButton(self.centralwidget)
+        self.previous_button = QtWidgets.QPushButton(self.centralwidget)
+        self.volume_slider = QtWidgets.QSlider(self.centralwidget)
+        self.checkbox = QtWidgets.QCheckBox(self.centralwidget)
+        self.time_slider = QtWidgets.QSlider(self.centralwidget)
+        self.timer = QtCore.QTimer(self.centralwidget) 
+        self.time_label = QtWidgets.QLabel(self.centralwidget)
+        self.time_length_label = QtWidgets.QLabel(self.centralwidget)
+        self.title = QtWidgets.QLabel(self.centralwidget)
+        # self.volume_label = QtWidgets.QLabel(self.centralwidget)
+        self.ui_song_list = QtWidgets.QListWidget(self.centralwidget)
+
+        self.current_audio = ''  # To prevent errors when trying to play nothing
+        self.checking_thread = None  # For the auto play
+        self.audio_paths = {}  # This will be needed when running the audio
+        self.saved_music()  # Adding all the previously saved music
+        self.retranslate_ui(self.mw)
+        QtCore.QMetaObject.connectSlotsByName(self.mw)
+
+        self.centralframe.addWidget(self.title)
+        self.title.setFont(QtGui.QFont('Arial', 20))
+        self.title.setAlignment(QtCore.Qt.AlignCenter)
+
+        volume_widget = QtWidgets.QWidget()
+        volume_widget.setLayout(self.volume_frame)
+        self.centralframe.addWidget(volume_widget)
+
+        frame_widget = QtWidgets.QWidget()
+        frame_widget.setLayout(self.button_frame)
+        self.centralframe.addWidget(frame_widget)
+
+        timer_widget = QtWidgets.QWidget()
+        timer_widget.setLayout(self.timer_frame)
+        self.centralframe.addWidget(timer_widget)
+
+        #  self.play_pause_song is the function that is linked
+        # self.play_pause_button.setGeometry(QtCore.QRect(370, 50, 40, 24))
+        self.play_pause_button.clicked.connect(self.play_pause_song)
+        self.button_frame.addWidget(self.play_pause_button)
+
+        # self.stop_button.setGeometry(QtCore.QRect(250, 50, 40, 24))
+        self.stop_button.clicked.connect(self.stop_song)
+        self.button_frame.addWidget(self.stop_button)
+
+        # self.add_new_song_button.setGeometry(QtCore.QRect(690, 50, 80, 24))
+        self.add_new_song_button.clicked.connect(self.add_song)
+        self.button_frame.addWidget(self.add_new_song_button)
+
+        # self.remove_song_button.setGeometry(QtCore.QRect(630, 50, 50, 24))
+        self.remove_song_button.clicked.connect(self.remove_song)
+        self.button_frame.addWidget(self.remove_song_button)
+
+        # self.restart_button.setGeometry(QtCore.QRect(470, 50, 50, 24))
+        self.restart_button.clicked.connect(self.restart_song)
+        self.button_frame.addWidget(self.restart_button)
+
+        # self.next_button.setGeometry(QtCore.QRect(420, 50, 40, 24))
+        self.next_button.clicked.connect(self.next_song)
+        self.button_frame.addWidget(self.next_button)
+
+        # self.previous_button.setGeometry(QtCore.QRect(300, 50, 60, 24))
+        self.previous_button.clicked.connect(self.previous_song)
+        self.button_frame.addWidget(self.previous_button)
+
+        self.volume_slider.setMinimum(0)
+        self.volume_slider.setMaximum(100)
+        self.volume_slider.setValue(100)
+        self.volume_frame.addWidget(self.volume_slider, alignment=QtCore.Qt.AlignLeft)
+        self.volume_slider.setOrientation(QtCore.Qt.Horizontal)
+        self.volume_slider.valueChanged.connect(self.volume)
+
+        self.time_slider.setMinimum(0)
+        self.time_slider.setMaximum(10000)
+        self.time_slider.setValue(0)
+        self.time_slider.setSingleStep(1)
+        self.time_slider.setOrientation(QtCore.Qt.Horizontal)
+        self.time_slider.sliderMoved.connect(self.slider_moved)
+        self.timer_frame.addWidget(self.time_label)
+        self.timer_frame.addWidget(self.time_slider)
+        self.timer_frame.addWidget(self.time_length_label)
+
+        self.checkbox.stateChanged.connect(self.auto_play)
+        self.volume_frame.addWidget(self.checkbox, alignment=QtCore.Qt.AlignRight)
+        # self.checkbox.setGeometry(QtCore.QRect(530, 54, 90, 20))
+
+        self.timer.timeout.connect(self.time_hit) 
+        self.timer.start(400)
+
+        # self.time_label.setGeometry(QtCore.QRect(500, 100, 120, 20))
+
+        # self.volume_label.setGeometry(QtCore.QRect(20, 20, 40, 20))
+        # self.volume_label.setFont(QtGui.QFont('Arial', 7))
+
+        # self.ui_song_list.setGeometry(QtCore.QRect(10, 120, 780, 480))
+        self.ui_song_list.setEnabled(True)
+        self.ui_song_list.setStyleSheet('background-color: lightgray;')
+        self.ui_song_list.itemClicked.connect(self.play_song)
+        self.centralframe.addWidget(self.ui_song_list)
+
+        # self.volume_label.adjustSize()
+        # self.time_label.adjustSize()
+
+    def saved_music(self):  # Adds the songs that are in the database; Songs are returned in a tuple each
+        audio_names = database.extract_audio()
+        if type(audio_names) is list:  # If there are more songs
+            for audio in audio_names:
+                self.ui_song_list.addItem(audio[0])
+                self.audio_paths[audio[0]] = audio[1]  # Unpacking the tuple
+        self.all_audios = self.ui_song_list.findItems('', QtCore.Qt.MatchContains)
+
+    def config_audio(self, audio=''):  # Changes the song of the player
+        if not audio:  # If no audio is chosen
+            media = self.vlc_instance.media_new(audio)
+        else:
+            media = self.vlc_instance.media_new(self.audio_paths[audio])
+        self.player = self.vlc_instance.media_player_new()
+        self.player.set_media(media)
+
+    def play_song(self, selected_audio):  # This is called when a song is clicked
+        self.current_audio = selected_audio.text()  # Setting the new audio
+        self.player.stop()              
+        self.config_audio(audio=self.current_audio)
+        self.player.play()
+
+    def play_pause_song(self):  # The event for the 'Pause' button
+        if not self.current_audio:  # If no audio is chosen just play the first
+            self.default_song()  # This calls/plays the first audio
+        else:
+            if self.player.is_playing():  # If any sound is playing
+                self.player.pause()
+                self.play_pause_button.setText('Play')  # Button caption
+
+            else:
+                self.play_pause_button.setText('Pause')  # Button caption
+                self.player.play()
+
+    def stop_song(self):
+        self.player.stop()
+        self.play_pause_button.setText('Play')  # 'Play' button caption
+
+    def previous_song(self):
+        previous = None  # Temporary variable
+        if self.current_audio:
+            self.player.stop()
+            if self.current_audio == self.all_audios[0].text():  # To play the last song if the first one is playing
+                previous = self.all_audios[-1]
+            else:
+                for audio in self.all_audios:
+                    if audio.text() == self.current_audio:
+                        break  # This basically stops stops the assignment of
+                        # previous var,so that it remebers the actual prev.song
+                    previous = audio
+            self.ui_song_list.setCurrentItem(previous)
+            self.current_audio = previous.text()
+            self.play_song(previous)
+
+    def next_song(self):
+        if self.current_audio:
+            try:  # Error will be raised for the last song
+                self.player.stop()
+                for count, song in enumerate(self.all_audios):
+                    if song.text() == self.current_audio:
+                        next_audio = self.all_audios[count+1]
+                        self.current_audio = next_audio.text()  # Makes the next audio play
+                        self.ui_song_list.setCurrentItem(next_audio)
+                        self.play_song(next_audio)
+                        break  # To prevent the loop from going after finishing it's purpose
+
+            except IndexError:  # Will raise when the last song is skipped
+                self.default_song()  # Plays the first audio
+
+    def restart_song(self):
+        self.stop_song()
+        self.player.play()  # Replay
+
+    def remove_song(self):
+        self.player.stop()
+        for audio in self.all_audios:
+            if audio.text() == self.current_audio:
+                database.delete_audio(self.current_audio)
+                self.audio_paths[self.current_audio].pop()
+                self.all_audios.remove(audio)
+                # Next, removing from the GUI list
+                self.ui_song_list.takeItem(self.ui_song_list.currentRow())
+                break
+
+    def add_song(self):
+        Tk().withdraw()  # Creating the interface for choosing songs
+        filetypes = [('mp3 files', '*.mp3'), ('wav files', '*.wav')]  # Only audio should pe added
+        list_of_chosen_audio = filedialog.askopenfilenames(title='Choose audio files', filetypes=filetypes)
+        for audio_path in list_of_chosen_audio:
+            audio_name = audio_path[:-4].split('/')[-1]  # taking only the audio name without mp3 and audio_paths                                                                                                                                                                                                                                                               
+            self.audio_paths[audio_name] = audio_path
+            self.ui_song_list.addItem(audio_name)
+            database.insert_in_table((audio_name, audio_path))  # Inserting the audio
+        self.all_songs = self.ui_song_list.findItems('', QtCore.Qt.MatchContains)
+
+    def time_hit(self):
+        if self.player.is_playing():
+            length = str(timedelta(seconds = self.player.get_length() // 1000))  # miliseconds to seconds
+            current_time = str(timedelta(seconds = self.player.get_time() // 1000))
+            self.time_label.setText(str(current_time))
+            self.time_length_label.setText(str(length))
+
+            self.time_slider.setValue(self.player.get_position()*10000) # update slide bar
+        else:
+            sleep(1)
+
+    def slider_moved(self):
+        try:                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+            self.player.set_position(self.time_slider.value()/10000)  # / 10000 to keep the slider more responsive
+        except Exception as e:
+            print(e)
+
+    def slider_changed(self):
+        #This is called when you move the song time slider
+        if self.player.is_playing():  # If any song is playing
+            self.time_slider.setValue(round(self.player.get_position()*10000, 2))
+            self.player.set_position(self.time_slider.value()/10000)
+
+    def volume(self, _=None):  # _ is an unused argument that is passed
+        self.player.audio_set_volume(self.volume_slider.value())
+
+    def auto_play(self):  # When you choose to play automatically the next song
+        if self.checkbox.isChecked():  # If you chose it
+            self.auto_next = True  # This is going to control the checking thread
+            if not self.checking_thread:  # To avoid playing multiple songs at once when spamming next/previous button
+                self.checking_thread = Thread(target=self.check_playing)
+                self.checking_thread.setDaemon(True)  # The thread will finish with the program
+                self.checking_thread.start()
+        else:  # If you chose not to play automatically next song
+            self.auto_next = False  # Kill the thread that checks
+
+    def check_playing(self):  # A thread function that will play the next song when the current one is done
+        while self.auto_next:
+            if self.checkbox.isChecked():
+                if self.player.is_playing():
+                    sleep(1)  # To have a slight delay
+                else:
+                    self.next_song()
+                    sleep(2)
+                    self.check_playing()
+            else:
+                self.player.stop()
+                break
+
+    def default_song(self):
+        try:  # Can raise an exception if no music was added
+            self.current_audio = self.all_audios[0].text()
+            self.ui_song_list.setCurrentItem(self.all_audios[0])
+            self.play_song(self.all_audios[0])
+        except IndexError:
+            pass  # Do nothing if buttons are clicked, while there are no songs
+
+    def retranslate_ui(self, main_window):  # Setting the text for all the buttons and labels
+        main_window.setCentralWidget(self.centralwidget)
+        main_window.setWindowTitle("MP3 Player")
+        self.play_pause_button.setText("Play")
+        self.stop_button.setText("Stop")
+        self.add_new_song_button.setText("Add Songs")
+        self.remove_song_button.setText("Remove")
+        self.restart_button.setText("Restart")
+        self.next_button.setText("Next")
+        self.previous_button.setText("Previous")
+        self.checkbox.setText("Auto-Play")
+        self.time_label.setText('0:00:00')
+        self.time_length_label.setText('0:00:00')
+        self.title.setText("MP3 Player")
+        # self.volume_label.setText("Volume")
+
+
+class Database:
+    '''
+    The database stores all the added songs and their paths
+    '''
+    def __init__(self, db_file):
+        self.connection = None
+        try:
+            # Creating the connection with the database
+            self.connection = sqlite3.connect(db_file)
+            self.my_cursor = self.connection.cursor()
+        except sqlite3.Error as e:
+            print(e)  # Print the error if any
+
+        with self.connection:  # Making the connection
+            # Creating the main song table
+            self.my_cursor.execute('CREATE TABLE IF NOT EXISTS Audio (audio text, audio_path text);')
+
+    def insert_in_table(self, audio):
+        try:
+            with self.connection:
+                sql = 'INSERT INTO Audio(audio, audio_path) VALUES(?,?)'
+                # Executing the insertion statement
+                self.my_cursor.execute(sql, audio)
+                # Saving the changes
+                self.connection.commit()
+        except sqlite3.ProgrammingError:
+            print("Can't add nothing")
+
+    def extract_audio(self, audio_name=''):
+        with self.connection:
+            # Next, we make the sql statement so that we avoid SQL Injections
+            sql = "SELECT * FROM Audio WHERE audio LIKE '%'||?||'%'"
+            self.my_cursor.execute(sql, (audio_name,))
+            audio = self.my_cursor.fetchall()
+        return audio
+
+    def delete_audio(self, audio):
+        with self.connection:
+            sql = "DELETE FROM Audio WHERE audio = ?"
+            self.my_cursor.execute(sql, (audio,))
+            self.connection.commit()
+
+
+if __name__ == "__main__":
+    import sys
+    database = Database(os.getcwd() + '/music_database.db')  # Creating/opening the database file
+    app = QtWidgets.QApplication(sys.argv)
+    app.setStyleSheet("""
+    QMainWindow {
+        background-image: url("bg.jpg"); 
+        background-repeat: no-repeat; 
+        background-position: center;
+    }
+""")
+    MainWindow = QtWidgets.QMainWindow()
+    ui = UiMainWindow(MainWindow)
+    MainWindow.show()
+    sys.exit(app.exec_())
