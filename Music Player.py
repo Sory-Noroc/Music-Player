@@ -57,7 +57,6 @@ class UiMainWindow:
         self.time_label = QtWidgets.QLabel(self.centralwidget)
         self.time_length_label = QtWidgets.QLabel(self.centralwidget)
         self.title = QtWidgets.QLabel(self.centralwidget)
-        # self.volume_label = QtWidgets.QLabel(self.centralwidget)
         self.ui_song_list = QtWidgets.QListWidget(self.centralwidget)
 
         self.current_audio = ''  # To prevent errors when trying to play nothing
@@ -83,32 +82,25 @@ class UiMainWindow:
         timer_widget.setLayout(self.timer_frame)
         self.centralframe.addWidget(timer_widget)
 
-        #  self.play_pause_song is the function that is linked
-        # self.play_pause_button.setGeometry(QtCore.QRect(370, 50, 40, 24))
+        #  self.play_pause_song is the function that is linked to the button
         self.play_pause_button.clicked.connect(self.play_pause_song)
         self.button_frame.addWidget(self.play_pause_button)
 
-        # self.stop_button.setGeometry(QtCore.QRect(250, 50, 40, 24))
         self.stop_button.clicked.connect(self.stop_song)
         self.button_frame.addWidget(self.stop_button)
 
-        # self.add_new_song_button.setGeometry(QtCore.QRect(690, 50, 80, 24))
         self.add_new_song_button.clicked.connect(self.add_song)
         self.button_frame.addWidget(self.add_new_song_button)
 
-        # self.remove_song_button.setGeometry(QtCore.QRect(630, 50, 50, 24))
         self.remove_song_button.clicked.connect(self.remove_song)
         self.button_frame.addWidget(self.remove_song_button)
 
-        # self.restart_button.setGeometry(QtCore.QRect(470, 50, 50, 24))
         self.restart_button.clicked.connect(self.restart_song)
         self.button_frame.addWidget(self.restart_button)
 
-        # self.next_button.setGeometry(QtCore.QRect(420, 50, 40, 24))
         self.next_button.clicked.connect(self.next_song)
         self.button_frame.addWidget(self.next_button)
 
-        # self.previous_button.setGeometry(QtCore.QRect(300, 50, 60, 24))
         self.previous_button.clicked.connect(self.previous_song)
         self.button_frame.addWidget(self.previous_button)
 
@@ -131,24 +123,14 @@ class UiMainWindow:
 
         self.checkbox.stateChanged.connect(self.auto_play)
         self.volume_frame.addWidget(self.checkbox, alignment=QtCore.Qt.AlignRight)
-        # self.checkbox.setGeometry(QtCore.QRect(530, 54, 90, 20))
 
         self.timer.timeout.connect(self.time_hit) 
         self.timer.start(400)
 
-        # self.time_label.setGeometry(QtCore.QRect(500, 100, 120, 20))
-
-        # self.volume_label.setGeometry(QtCore.QRect(20, 20, 40, 20))
-        # self.volume_label.setFont(QtGui.QFont('Arial', 7))
-
-        # self.ui_song_list.setGeometry(QtCore.QRect(10, 120, 780, 480))
         self.ui_song_list.setEnabled(True)
         self.ui_song_list.setStyleSheet('background-color: lightgray;')
         self.ui_song_list.itemClicked.connect(self.play_song)
         self.centralframe.addWidget(self.ui_song_list)
-
-        # self.volume_label.adjustSize()
-        # self.time_label.adjustSize()
 
     def saved_music(self):  # Adds the songs that are in the database; Songs are returned in a tuple each
         audio_names = database.extract_audio()
