@@ -11,7 +11,6 @@ from tkinter import Tk, filedialog  # 8.6
 from time import sleep
 from datetime import timedelta
 from pygame import mixer  # version 2.0.1
-from PIL import ImageTk,Image  # For images for the buttons
 
 
 class UiMainWindow:
