@@ -10,7 +10,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from tkinter import Tk, filedialog  # 8.6
 from time import sleep
 from datetime import timedelta
-from pygame import mixer  # version 1.9.6
+from pygame import mixer  # version 2.0.1
 from PIL import ImageTk,Image  # For images for the buttons
 
 
@@ -33,15 +33,11 @@ class UiMainWindow:
 
         # Initiating the frames, buttons and labels
         self.centralframe = QtWidgets.QVBoxLayout()
-        self.centralframe.setSpacing(6)
         self.centralwidget.setLayout(self.centralframe)
 
         self.button_frame = QtWidgets.QHBoxLayout()
-        self.button_frame.setSpacing(6)
         self.timer_frame = QtWidgets.QHBoxLayout()
-        self.timer_frame.setSpacing(6)
         self.volume_frame = QtWidgets.QHBoxLayout()
-        self.volume_frame.setSpacing(6)
 
         self.play_pause_button = QtWidgets.QPushButton(self.centralwidget)
         self.stop_button = QtWidgets.QPushButton(self.centralwidget)
@@ -131,6 +127,7 @@ class UiMainWindow:
         self.ui_song_list.setStyleSheet('background-color: lightgray;')
         self.ui_song_list.itemClicked.connect(self.play_song)
         self.centralframe.addWidget(self.ui_song_list)
+        self.paused = False
 
     def saved_music(self):  # Adds the songs that are in the database; Songs are returned in a tuple each
         audio_names = database.extract_audio()
@@ -149,6 +146,7 @@ class UiMainWindow:
         self.player.set_media(media)
 
     def play_song(self, selected_audio):  # This is called when a song is clicked
+        self.paused = False
         self.current_audio = selected_audio.text()  # Setting the new audio
         self.player.stop()              
         self.config_audio(audio=self.current_audio)
@@ -160,13 +158,16 @@ class UiMainWindow:
         else:
             if self.player.is_playing():  # If any sound is playing
                 self.player.pause()
+                self.paused = True
                 self.play_pause_button.setText('Play')  # Button caption
 
             else:
                 self.play_pause_button.setText('Pause')  # Button caption
+                self.paused = False
                 self.player.play()
 
     def stop_song(self):
+        self.paused = True
         self.player.stop()
         self.play_pause_button.setText('Play')  # 'Play' button caption
 
@@ -266,7 +267,7 @@ class UiMainWindow:
     def check_playing(self):  # A thread function that will play the next song when the current one is done
         while self.auto_next:
             if self.checkbox.isChecked():
-                if self.player.is_playing():
+                if self.player.is_playing() or self.paused:
                     sleep(1)  # To have a slight delay
                 else:
                     self.next_song()
