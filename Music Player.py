@@ -34,9 +34,9 @@ class UiMainWindow:
         self.centralframe = QtWidgets.QVBoxLayout()
         self.centralwidget.setLayout(self.centralframe)
 
-        self.button_frame = QtWidgets.QHBoxLayout()
-        self.timer_frame = QtWidgets.QHBoxLayout()
-        self.volume_frame = QtWidgets.QHBoxLayout()
+        button_frame = QtWidgets.QHBoxLayout()
+        timer_frame = QtWidgets.QHBoxLayout()
+        volume_frame = QtWidgets.QHBoxLayout()
 
         self.play_pause_button = QtWidgets.QPushButton(self.centralwidget)
         self.stop_button = QtWidgets.QPushButton(self.centralwidget)
@@ -64,45 +64,36 @@ class UiMainWindow:
         self.centralframe.addWidget(self.title)
         self.title.setFont(QtGui.QFont('Arial', 20))
         self.title.setAlignment(QtCore.Qt.AlignCenter)
-
-        volume_widget = QtWidgets.QWidget()
-        volume_widget.setLayout(self.volume_frame)
-        self.centralframe.addWidget(volume_widget)
-
-        frame_widget = QtWidgets.QWidget()
-        frame_widget.setLayout(self.button_frame)
-        self.centralframe.addWidget(frame_widget)
-
-        timer_widget = QtWidgets.QWidget()
-        timer_widget.setLayout(self.timer_frame)
-        self.centralframe.addWidget(timer_widget)
+        self.setBoxFrame(volume_frame)
+        self.setBoxFrame(button_frame)
+        self.setBoxFrame(timer_frame)
 
         #  self.play_pause_song is the function that is linked to the button
         self.play_pause_button.clicked.connect(self.play_pause_song)
-        self.button_frame.addWidget(self.play_pause_button)
+        button_frame.addWidget(self.play_pause_button)
 
         self.stop_button.clicked.connect(self.stop_song)
-        self.button_frame.addWidget(self.stop_button)
+        button_frame.addWidget(self.stop_button)
 
         self.add_new_song_button.clicked.connect(self.add_song)
-        self.button_frame.addWidget(self.add_new_song_button)
+        button_frame.addWidget(self.add_new_song_button)
 
         self.remove_song_button.clicked.connect(self.remove_song)
-        self.button_frame.addWidget(self.remove_song_button)
+        button_frame.addWidget(self.remove_song_button)
 
         self.restart_button.clicked.connect(self.restart_song)
-        self.button_frame.addWidget(self.restart_button)
+        button_frame.addWidget(self.restart_button)
 
         self.next_button.clicked.connect(self.next_song)
-        self.button_frame.addWidget(self.next_button)
+        button_frame.addWidget(self.next_button)
 
         self.previous_button.clicked.connect(self.previous_song)
-        self.button_frame.addWidget(self.previous_button)
+        button_frame.addWidget(self.previous_button)
 
         self.volume_slider.setMinimum(0)
         self.volume_slider.setMaximum(100)
         self.volume_slider.setValue(100)
-        self.volume_frame.addWidget(self.volume_slider, alignment=QtCore.Qt.AlignLeft)
+        volume_frame.addWidget(self.volume_slider, alignment=QtCore.Qt.AlignLeft)
         self.volume_slider.setOrientation(QtCore.Qt.Horizontal)
         self.volume_slider.valueChanged.connect(self.volume)
 
@@ -112,12 +103,12 @@ class UiMainWindow:
         self.time_slider.setSingleStep(1)
         self.time_slider.setOrientation(QtCore.Qt.Horizontal)
         self.time_slider.sliderMoved.connect(self.slider_moved)
-        self.timer_frame.addWidget(self.time_label)
-        self.timer_frame.addWidget(self.time_slider)
-        self.timer_frame.addWidget(self.time_length_label)
+        timer_frame.addWidget(self.time_label)
+        timer_frame.addWidget(self.time_slider)
+        timer_frame.addWidget(self.time_length_label)
 
         self.checkbox.stateChanged.connect(self.auto_play)
-        self.volume_frame.addWidget(self.checkbox, alignment=QtCore.Qt.AlignRight)
+        volume_frame.addWidget(self.checkbox, alignment=QtCore.Qt.AlignRight)
 
         self.timer.timeout.connect(self.time_hit) 
         self.timer.start(400)
@@ -127,6 +118,11 @@ class UiMainWindow:
         self.ui_song_list.itemClicked.connect(self.play_song)
         self.centralframe.addWidget(self.ui_song_list)
         self.paused = False
+
+    def setBoxFrame(self, frame):
+        widget = QtWidgets.QWidget()
+        widget.setLayout(frame)
+        self.centralframe.addWidget(widget)
 
     def saved_music(self):  # Adds the songs that are in the database; Songs are returned in a tuple each
         audio_names = database.extract_audio()
