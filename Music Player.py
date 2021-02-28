@@ -9,7 +9,7 @@ from threading import Thread
 from PyQt5 import QtCore, QtGui, QtWidgets
 from tkinter import Tk, filedialog  # 8.6
 from time import sleep
-from datetime import timedelta
+from datetime import timedelta 
 from pygame import mixer  # version 2.0.1
 
 
@@ -57,7 +57,6 @@ class UiMainWindow:
         self.current_audio = ''  # To prevent errors when trying to play nothing
         self.checking_thread = None  # For the auto play
         self.audio_paths = {}  # This will be needed when running the audio
-        self.saved_music()  # Adding all the previously saved music
         self.retranslate_ui(self.mw)
         QtCore.QMetaObject.connectSlotsByName(self.mw)
 
@@ -68,27 +67,23 @@ class UiMainWindow:
         self.setBoxFrame(button_frame)
         self.setBoxFrame(timer_frame)
 
-        #  self.play_pause_song is the function that is linked to the button
+        #  self.play_pause_song is the function that is linked to that button
         self.play_pause_button.clicked.connect(self.play_pause_song)
-        button_frame.addWidget(self.play_pause_button)
-
         self.stop_button.clicked.connect(self.stop_song)
-        button_frame.addWidget(self.stop_button)
-
         self.add_new_song_button.clicked.connect(self.add_song)
-        button_frame.addWidget(self.add_new_song_button)
-
         self.remove_song_button.clicked.connect(self.remove_song)
-        button_frame.addWidget(self.remove_song_button)
-
         self.restart_button.clicked.connect(self.restart_song)
-        button_frame.addWidget(self.restart_button)
-
         self.next_button.clicked.connect(self.next_song)
-        button_frame.addWidget(self.next_button)
-
         self.previous_button.clicked.connect(self.previous_song)
+
+        # Adding the buttons in the order of their appearance
+        button_frame.addWidget(self.add_new_song_button)
+        button_frame.addWidget(self.stop_button)
         button_frame.addWidget(self.previous_button)
+        button_frame.addWidget(self.play_pause_button)
+        button_frame.addWidget(self.next_button)
+        button_frame.addWidget(self.restart_button)
+        button_frame.addWidget(self.remove_song_button)
 
         self.volume_slider.setMinimum(0)
         self.volume_slider.setMaximum(100)
@@ -113,10 +108,13 @@ class UiMainWindow:
         self.timer.timeout.connect(self.time_hit) 
         self.timer.start(400)
 
+        icon_path = os.getcwd() + '/note.png'
+        self.icon = QtGui.QIcon(icon_path)
         self.ui_song_list.setEnabled(True)
         self.ui_song_list.setStyleSheet('background-color: lightgray;')
         self.ui_song_list.itemClicked.connect(self.play_song)
         self.centralframe.addWidget(self.ui_song_list)
+        self.saved_music()  # Adding all the previously saved music
         self.paused = False
 
     def setBoxFrame(self, frame):
@@ -124,11 +122,18 @@ class UiMainWindow:
         widget.setLayout(frame)
         self.centralframe.addWidget(widget)
 
+    def addAudio(self, list_widget, text, icon):
+        item = QtWidgets.QListWidgetItem(icon, text)  # Making a list item with both an image and song
+        size = QtCore.QSize()
+        size.setHeight(50)
+        item.setSizeHint(size)
+        list_widget.addItem(item)
+
     def saved_music(self):  # Adds the songs that are in the database; Songs are returned in a tuple each
         audio_names = database.extract_audio()
         if type(audio_names) is list:  # If there are more songs
             for audio in audio_names:
-                self.ui_song_list.addItem(audio[0])
+                self.addAudio(self.ui_song_list, audio[0], self.icon)
                 self.audio_paths[audio[0]] = audio[1]  # Unpacking the tuple
         self.all_audios = self.ui_song_list.findItems('', QtCore.Qt.MatchContains)
 
@@ -146,6 +151,7 @@ class UiMainWindow:
         self.player.stop()              
         self.config_audio(audio=self.current_audio)
         self.player.play()
+        self.play_pause_button.setText('Pause')  # Button caption
 
     def play_pause_song(self):  # The event for the 'Pause' button
         if not self.current_audio:  # If no audio is chosen just play the first
@@ -215,15 +221,16 @@ class UiMainWindow:
     def add_song(self):
         Tk().withdraw()  # Creating the interface for choosing songs
         filetypes = [('mp3 files', '*.mp3'), ('wav files', '*.wav')]  # Only audio should pe added
-        list_of_chosen_audio = filedialog.askopenfilenames(title='Choose audio files', filetypes=filetypes)
-        for audio_path in list_of_chosen_audio:
-            audio_name = audio_path[:-4].split('/')[-1]  # taking only the audio name without mp3 and audio_paths                                                                                                                                                                                                                                                               
+        audios_list = filedialog.askopenfilenames(title='Choose audio files', filetypes=filetypes)
+        for audio_path in audios_list:
+            audio_name, ext = os.path.splitext(audio_path)  # taking only the audio name                                                                                                                                                                                                                                                               
             self.audio_paths[audio_name] = audio_path
             self.ui_song_list.addItem(audio_name)
             database.insert_in_table((audio_name, audio_path))  # Inserting the audio
         self.all_songs = self.ui_song_list.findItems('', QtCore.Qt.MatchContains)
 
     def time_hit(self):
+        # This tracks the time of the song and it's length
         if self.player.is_playing():
             length = str(timedelta(seconds = self.player.get_length() // 1000))  # miliseconds to seconds
             current_time = str(timedelta(seconds = self.player.get_time() // 1000))
@@ -235,6 +242,7 @@ class UiMainWindow:
             sleep(1)
 
     def slider_moved(self):
+        # This is called when the user moves the slider
         try:                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
             self.player.set_position(self.time_slider.value()/10000)  # / 10000 to keep the slider more responsive
         except Exception as e:
@@ -290,7 +298,7 @@ class UiMainWindow:
         self.restart_button.setText("Restart")
         self.next_button.setText("Next")
         self.previous_button.setText("Previous")
-        self.checkbox.setText("Auto-Play")
+        self.checkbox.setText("Autoplay")
         self.time_label.setText('0:00:00')
         self.time_length_label.setText('0:00:00')
         self.title.setText("MP3 Player")
