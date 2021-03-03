@@ -112,12 +112,12 @@ class UiMainWindow:
         self.icon = QtGui.QIcon(icon_path)
         self.ui_song_list.setEnabled(True)
         self.ui_song_list.setStyleSheet('background-color: lightgray;')
-        self.ui_song_list.itemClicked.connect(self.play_song)
-        self.centralframe.addWidget(self.ui_song_list)
+        self.ui_song_list.itemClicked.connect(self.play_song)  # This function will be called when an audio gets clicked
+        self.centralframe.addWidget(self.ui_song_list)  # Adding the audio list widget to the interface
         self.saved_music()  # Adding all the previously saved music
         self.paused = False
 
-    def setBoxFrame(self, frame):
+    def setBoxFrame(self, frame):  # For creating the main frames
         widget = QtWidgets.QWidget()
         widget.setLayout(frame)
         self.centralframe.addWidget(widget)
@@ -154,7 +154,7 @@ class UiMainWindow:
         self.play_pause_button.setText('Pause')  # Button caption
 
     def play_pause_song(self):  # The event for the 'Pause' button
-        if not self.current_audio:  # If no audio is chosen just play the first
+        if not self.current_audio:  # If no audio is chosen, just the first one
             self.default_song()  # This calls/plays the first audio
         else:
             if self.player.is_playing():  # If any sound is playing
@@ -173,6 +173,8 @@ class UiMainWindow:
         self.play_pause_button.setText('Play')  # 'Play' button caption
 
     def previous_song(self):
+        self.player.stop()
+        
         previous = None  # Temporary variable
         if self.current_audio:
             self.player.stop()
@@ -181,8 +183,7 @@ class UiMainWindow:
             else:
                 for audio in self.all_audios:
                     if audio.text() == self.current_audio:
-                        break  # This basically stops stops the assignment of
-                        # previous var,so that it remebers the actual prev.song
+                        break  # This basically stops the loop when done
                     previous = audio
             self.ui_song_list.setCurrentItem(previous)
             self.current_audio = previous.text()
@@ -212,7 +213,7 @@ class UiMainWindow:
         for audio in self.all_audios:
             if audio.text() == self.current_audio:
                 database.delete_audio(self.current_audio)
-                self.audio_paths[self.current_audio].pop()
+                self.audio_paths.pop(self.current_audio)
                 self.all_audios.remove(audio)
                 # Next, removing from the GUI list
                 self.ui_song_list.takeItem(self.ui_song_list.currentRow())
@@ -223,9 +224,10 @@ class UiMainWindow:
         filetypes = [('mp3 files', '*.mp3'), ('wav files', '*.wav')]  # Only audio should pe added
         audios_list = filedialog.askopenfilenames(title='Choose audio files', filetypes=filetypes)
         for audio_path in audios_list:
-            audio_name, ext = os.path.splitext(audio_path)  # taking only the audio name                                                                                                                                                                                                                                                               
+            path, ext = os.path.splitext(audio_path)  # taking only the audio path without the extension
+            audio_name = os.path.basename(path)                                                                                                                                                                                                                                                   
             self.audio_paths[audio_name] = audio_path
-            self.ui_song_list.addItem(audio_name)
+            self.addAudio(self.ui_song_list, audio_name, self.icon)
             database.insert_in_table((audio_name, audio_path))  # Inserting the audio
         self.all_songs = self.ui_song_list.findItems('', QtCore.Qt.MatchContains)
 
@@ -350,7 +352,7 @@ class Database:
 
 if __name__ == "__main__":
     import sys
-    database = Database(os.getcwd() + '/music_database.db')  # Creating/opening the database file
+    database = Database(os.path.abspath('music_database.db'))  # Creating/opening the database file
     app = QtWidgets.QApplication(sys.argv)
     app.setStyleSheet("""
     QMainWindow {
