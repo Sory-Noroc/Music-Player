@@ -3,6 +3,7 @@
 # Installation
 
 vlc -> pip install python-vlc
+
 PyQt5 -> pip install pyqt5
 
 # Usage
