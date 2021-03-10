@@ -55,7 +55,6 @@ class UiMainWindow:
         self.ui_song_list = QtWidgets.QListWidget(self.centralwidget)
 
         self.current_audio = ''  # To prevent errors when trying to play nothing
-        self.checking_thread = None  # For the auto play
         self.audio_paths = {}  # This will be needed when running the audio
         self.retranslate_ui(self.mw)
         QtCore.QMetaObject.connectSlotsByName(self.mw)
@@ -108,7 +107,7 @@ class UiMainWindow:
         self.timer.timeout.connect(self.time_hit) 
         self.timer.start(400)
 
-        icon_path = os.getcwd() + '/note.png'
+        icon_path = os.path.join('.', 'note.png')
         self.icon = QtGui.QIcon(icon_path)
         self.ui_song_list.setEnabled(True)
         self.ui_song_list.setStyleSheet('background-color: lightgray;')
@@ -244,9 +243,13 @@ class UiMainWindow:
             sleep(1)
 
     def slider_moved(self):
-        # This is called when the user moves the slider
-        try:                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+        # This is called when the user moves the slider, and it prevents blurry audio
+        try:
+            if self.player.is_playing():  # If any sound is playing
+                self.player.pause()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
             self.player.set_position(self.time_slider.value()/10000)  # / 10000 to keep the slider more responsive
+            if not self.player.is_playing():  # If any sound is playing
+                self.player.play()
         except Exception as e:
             print(e)
 
@@ -354,6 +357,7 @@ if __name__ == "__main__":
     import sys
     database = Database(os.path.abspath('music_database.db'))  # Creating/opening the database file
     app = QtWidgets.QApplication(sys.argv)
+    # Creating the app background, with an image
     app.setStyleSheet("""
     QMainWindow {
         background-image: url("bg.jpg"); 
