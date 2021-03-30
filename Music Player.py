@@ -107,7 +107,7 @@ class UiMainWindow:
         self.timer.timeout.connect(self.time_hit) 
         self.timer.start(400)
 
-        icon_path = os.path.join('.', 'note.png')
+        icon_path = os.path.join('.', 'images/note.png')
         self.icon = QtGui.QIcon(icon_path)
         self.ui_song_list.setEnabled(True)
         self.ui_song_list.setStyleSheet('background-color: lightgray;')
@@ -360,7 +360,7 @@ if __name__ == "__main__":
     # Creating the app background, with an image
     app.setStyleSheet("""
     QMainWindow {
-        background-image: url("bg.jpg"); 
+        background-image: url("images/bg.jpg"); 
         background-repeat: no-repeat; 
         background-position: center;
     }
