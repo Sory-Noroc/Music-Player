@@ -13,15 +13,16 @@ from pygame import mixer
 from sqldb import Database
 
 
-class UiMainWindow:
+class UiMainWindow(QtWidgets.QMainWindow):
     ''' Main class that builds the music player'''
     
     width = 15
 
-    def __init__(self, main_window):
-        self.mw = main_window
+    def __init__(self):
         # Next we add the minimize and close buttons to the window
-        self.mw.setWindowFlags(QtCore.Qt.WindowCloseButtonHint | QtCore.Qt.WindowMinimizeButtonHint)
+
+        super().__init__()
+        self.setWindowFlags(QtCore.Qt.WindowCloseButtonHint | QtCore.Qt.WindowMinimizeButtonHint)
         mixer.init()  # For the volume
 
         # Initiating the music player
@@ -29,8 +30,8 @@ class UiMainWindow:
         self.config_audio()
 
         # Initializing the GUI
-        self.mw.resize(800, 600)
-        self.centralwidget = QtWidgets.QWidget(self.mw)
+        self.resize(800, 600)
+        self.centralwidget = QtWidgets.QWidget(self)
 
         # Initiating the frames, buttons and labels
         self.centralframe = QtWidgets.QVBoxLayout()
@@ -58,8 +59,8 @@ class UiMainWindow:
 
         self.current_audio = ''  # To prevent errors when trying to play nothing
         self.audio_paths = {}  # This will be needed when running the audio
-        self.retranslate_ui(self.mw)
-        QtCore.QMetaObject.connectSlotsByName(self.mw)
+        self.retranslate_ui(self)
+        QtCore.QMetaObject.connectSlotsByName(self)
 
         self.centralframe.addWidget(self.title)
         self.title.setFont(QtGui.QFont('Arial', 20))
@@ -117,6 +118,7 @@ class UiMainWindow:
         self.centralframe.addWidget(self.ui_song_list)  # Adding the audio list widget to the interface
         self.get_saved_music()  # Adding all the previously saved music
         self.paused = False
+        self.show()
 
     def set_box_frame(self, frame):
         '''For creating the main frames'''
@@ -327,6 +329,52 @@ class UiMainWindow:
         self.title.setText("MP3 Player")
         # self.volume_label.setText("Volume")
 
+<<<<<<< HEAD
+=======
+
+class Database:
+    '''The database stores all the added songs and their paths'''
+    
+    def __init__(self, db_file):
+        self.connection = None
+        try:
+            # Creating the connection with the database
+            self.connection = sqlite3.connect(db_file)
+            self.my_cursor = self.connection.cursor()
+        except sqlite3.Error as e:
+            print(e)  # Print the error if any
+
+        with self.connection:  # Making the connection
+            # Creating the main song table
+            self.my_cursor.execute('CREATE TABLE IF NOT EXISTS Audio (audio text, audio_path text);')
+
+    def insert_in_table(self, audio):
+        try:
+            with self.connection:
+                sql = 'INSERT INTO Audio(audio, audio_path) VALUES(?,?)'
+                # Executing the insertion statement
+                self.my_cursor.execute(sql, audio)
+                # Saving the changes
+                self.connection.commit()
+        except sqlite3.ProgrammingError:
+            print("Can't add nothing")
+
+    def extract_audio(self, audio_name=''):
+        with self.connection:
+            # Next, we make the sql statement so that we avoid SQL Injections
+            sql = "SELECT * FROM Audio WHERE audio LIKE '%'||?||'%'"
+            self.my_cursor.execute(sql, (audio_name,))
+            audio = self.my_cursor.fetchall()
+        return audio
+
+    def delete_audio(self, audio):
+        with self.connection:
+            sql = "DELETE FROM Audio WHERE audio = ?"
+            self.my_cursor.execute(sql, (audio,))
+            self.connection.commit()
+
+
+>>>>>>> 2556cc1898c1e96b435eab2b8b511fabb785a787
 if __name__ == "__main__":
     import sys
     database = Database(os.path.abspath('music_database.db'))  # Creating/opening the database file
@@ -339,7 +387,5 @@ if __name__ == "__main__":
         background-position: center;
     }
 """)
-    MainWindow = QtWidgets.QMainWindow()
-    ui = UiMainWindow(MainWindow)
-    MainWindow.show()
+    ui = UiMainWindow()
     sys.exit(app.exec_())
