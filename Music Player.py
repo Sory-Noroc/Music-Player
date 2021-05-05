@@ -4,13 +4,13 @@
 
 import os
 import vlc
-import sqlite3
 from threading import Thread
 from PyQt5 import QtCore, QtGui, QtWidgets
 from tkinter import Tk, filedialog
 from time import sleep
 from datetime import timedelta
 from pygame import mixer
+from sqldb import Database
 
 
 class UiMainWindow:
@@ -135,7 +135,7 @@ class UiMainWindow:
     def get_saved_music(self):
         '''Adds the songs that are in the database'''
         audio_names = database.extract_audio()
-        if type(audio_names) is list:  # If there are more songs
+        if isinstance(audio_names, list):  # If there are more songs
             for audio in audio_names:
                 self.add_image(self.ui_song_list, audio[0], self.icon)
                 self.audio_paths[audio[0]] = audio[1]  # Unpacking the tuple
@@ -276,7 +276,8 @@ class UiMainWindow:
     def volume(self, _=None):  # _ is an unused argument that is passed
         self.player.audio_set_volume(self.volume_slider.value())
 
-    def auto_play(self):  # When you choose to play automatically the next song
+    def auto_play(self):
+        '''When it is chosen to play automatically the next song'''
         if self.checkbox.isChecked():  # If you chose it
             self.auto_next = True  # This is going to control the checking thread
             if not self.checking_thread:  # To avoid playing multiple songs at once when spamming next/previous button
@@ -286,7 +287,8 @@ class UiMainWindow:
         else:  # If you chose not to play automatically next song
             self.auto_next = False  # Kill the thread that checks
 
-    def check_playing(self):  # A thread function that will play the next song when the current one is done
+    def check_playing(self):
+        '''A thread function that will play the next song when the current one is done'''
         while self.auto_next:
             if self.checkbox.isChecked():
                 if self.player.is_playing() or self.paused:
@@ -300,6 +302,7 @@ class UiMainWindow:
                 break
 
     def default_song(self):
+        '''Assigns the first song of the list'''
         try:  # Can raise an exception if no music was added
             self.current_audio = self.all_audios[0].text()
             self.ui_song_list.setCurrentItem(self.all_audios[0])
@@ -307,7 +310,8 @@ class UiMainWindow:
         except IndexError:
             pass  # Do nothing if buttons are clicked, while there are no songs
 
-    def retranslate_ui(self, main_window):  # Setting the text for all the buttons and labels
+    def retranslate_ui(self, main_window):
+        '''Setting the text for all the buttons and labels'''
         main_window.setCentralWidget(self.centralwidget)
         main_window.setWindowTitle("MP3 Player")
         self.play_pause_button.setText("Play")
@@ -322,50 +326,6 @@ class UiMainWindow:
         self.time_length_label.setText('0:00:00')
         self.title.setText("MP3 Player")
         # self.volume_label.setText("Volume")
-
-
-class Database:
-    '''
-    The database stores all the added songs and their paths
-    '''
-    def __init__(self, db_file):
-        self.connection = None
-        try:
-            # Creating the connection with the database
-            self.connection = sqlite3.connect(db_file)
-            self.my_cursor = self.connection.cursor()
-        except sqlite3.Error as e:
-            print(e)  # Print the error if any
-
-        with self.connection:  # Making the connection
-            # Creating the main song table
-            self.my_cursor.execute('CREATE TABLE IF NOT EXISTS Audio (audio text, audio_path text);')
-
-    def insert_in_table(self, audio):
-        try:
-            with self.connection:
-                sql = 'INSERT INTO Audio(audio, audio_path) VALUES(?,?)'
-                # Executing the insertion statement
-                self.my_cursor.execute(sql, audio)
-                # Saving the changes
-                self.connection.commit()
-        except sqlite3.ProgrammingError:
-            print("Can't add nothing")
-
-    def extract_audio(self, audio_name=''):
-        with self.connection:
-            # Next, we make the sql statement so that we avoid SQL Injections
-            sql = "SELECT * FROM Audio WHERE audio LIKE '%'||?||'%'"
-            self.my_cursor.execute(sql, (audio_name,))
-            audio = self.my_cursor.fetchall()
-        return audio
-
-    def delete_audio(self, audio):
-        with self.connection:
-            sql = "DELETE FROM Audio WHERE audio = ?"
-            self.my_cursor.execute(sql, (audio,))
-            self.connection.commit()
-
 
 if __name__ == "__main__":
     import sys
