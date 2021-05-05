@@ -13,15 +13,16 @@ from datetime import timedelta
 from pygame import mixer
 
 
-class UiMainWindow:
+class UiMainWindow(QtWidgets.QMainWindow):
     ''' Main class that builds the music player'''
     
     width = 15
 
-    def __init__(self, main_window):
-        self.mw = main_window
+    def __init__(self):
         # Next we add the minimize and close buttons to the window
-        self.mw.setWindowFlags(QtCore.Qt.WindowCloseButtonHint | QtCore.Qt.WindowMinimizeButtonHint)
+
+        super().__init__()
+        self.setWindowFlags(QtCore.Qt.WindowCloseButtonHint | QtCore.Qt.WindowMinimizeButtonHint)
         mixer.init()  # For the volume
 
         # Initiating the music player
@@ -29,8 +30,8 @@ class UiMainWindow:
         self.config_audio()
 
         # Initializing the GUI
-        self.mw.resize(800, 600)
-        self.centralwidget = QtWidgets.QWidget(self.mw)
+        self.resize(800, 600)
+        self.centralwidget = QtWidgets.QWidget(self)
 
         # Initiating the frames, buttons and labels
         self.centralframe = QtWidgets.QVBoxLayout()
@@ -58,8 +59,8 @@ class UiMainWindow:
 
         self.current_audio = ''  # To prevent errors when trying to play nothing
         self.audio_paths = {}  # This will be needed when running the audio
-        self.retranslate_ui(self.mw)
-        QtCore.QMetaObject.connectSlotsByName(self.mw)
+        self.retranslate_ui(self)
+        QtCore.QMetaObject.connectSlotsByName(self)
 
         self.centralframe.addWidget(self.title)
         self.title.setFont(QtGui.QFont('Arial', 20))
@@ -117,6 +118,7 @@ class UiMainWindow:
         self.centralframe.addWidget(self.ui_song_list)  # Adding the audio list widget to the interface
         self.get_saved_music()  # Adding all the previously saved music
         self.paused = False
+        self.show()
 
     def set_box_frame(self, frame):
         '''For creating the main frames'''
@@ -135,7 +137,7 @@ class UiMainWindow:
     def get_saved_music(self):
         '''Adds the songs that are in the database'''
         audio_names = database.extract_audio()
-        if type(audio_names) is list:  # If there are more songs
+        if isinstance(audio_names, list):  # If there are more songs
             for audio in audio_names:
                 self.add_image(self.ui_song_list, audio[0], self.icon)
                 self.audio_paths[audio[0]] = audio[1]  # Unpacking the tuple
@@ -276,7 +278,8 @@ class UiMainWindow:
     def volume(self, _=None):  # _ is an unused argument that is passed
         self.player.audio_set_volume(self.volume_slider.value())
 
-    def auto_play(self):  # When you choose to play automatically the next song
+    def auto_play(self):
+        '''When it is chosen to play automatically the next song'''
         if self.checkbox.isChecked():  # If you chose it
             self.auto_next = True  # This is going to control the checking thread
             if not self.checking_thread:  # To avoid playing multiple songs at once when spamming next/previous button
@@ -286,7 +289,8 @@ class UiMainWindow:
         else:  # If you chose not to play automatically next song
             self.auto_next = False  # Kill the thread that checks
 
-    def check_playing(self):  # A thread function that will play the next song when the current one is done
+    def check_playing(self):
+        '''A thread function that will play the next song when the current one is done'''
         while self.auto_next:
             if self.checkbox.isChecked():
                 if self.player.is_playing() or self.paused:
@@ -300,6 +304,7 @@ class UiMainWindow:
                 break
 
     def default_song(self):
+        '''Assigns the first song of the list'''
         try:  # Can raise an exception if no music was added
             self.current_audio = self.all_audios[0].text()
             self.ui_song_list.setCurrentItem(self.all_audios[0])
@@ -307,7 +312,8 @@ class UiMainWindow:
         except IndexError:
             pass  # Do nothing if buttons are clicked, while there are no songs
 
-    def retranslate_ui(self, main_window):  # Setting the text for all the buttons and labels
+    def retranslate_ui(self, main_window):
+        '''Setting the text for all the buttons and labels'''
         main_window.setCentralWidget(self.centralwidget)
         main_window.setWindowTitle("MP3 Player")
         self.play_pause_button.setText("Play")
@@ -325,9 +331,8 @@ class UiMainWindow:
 
 
 class Database:
-    '''
-    The database stores all the added songs and their paths
-    '''
+    '''The database stores all the added songs and their paths'''
+    
     def __init__(self, db_file):
         self.connection = None
         try:
@@ -379,7 +384,5 @@ if __name__ == "__main__":
         background-position: center;
     }
 """)
-    MainWindow = QtWidgets.QMainWindow()
-    ui = UiMainWindow(MainWindow)
-    MainWindow.show()
+    ui = UiMainWindow()
     sys.exit(app.exec_())
