@@ -27,6 +27,12 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
         # Initiating the music player
         self.player = QtMultimedia.QMediaPlayer()
+        self.player.mediaStatusChanged.connect(self.status_changed)
+		self.player.stateChanged.connect(self.state_changed)
+		self.player.positionChanged.connect(self.position_changed)
+		self.player.volumeChanged.connect(self.volume_changed)
+		self.player.setVolume(60)
+        self.state = None  # -1 -> stopped; 0 -> paused; 1 -> playing;
 
         # Initializing the GUI
         self.resize(800, 600)
@@ -132,6 +138,18 @@ class UiMainWindow(QtWidgets.QMainWindow):
         size.setHeight(100)
         item.setSizeHint(size)
         list_widget.addItem(item)
+
+    def status_changed(self):
+        pass
+
+    def state_changed(self):
+        pass
+
+    def position_changed(self):
+        pass
+
+    def volume_changed(self):
+        pass
 
     def get_saved_music(self):
         '''Adds the songs that are in the database'''
