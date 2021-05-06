@@ -3,14 +3,16 @@
 # The program was designed in Windows
 
 import os
-import vlc
 from threading import Thread
 from PyQt5 import QtCore, QtGui, QtWidgets, QtMultimedia
 from tkinter import Tk, filedialog
 from time import sleep
 from datetime import timedelta
-from pygame import mixer
 from sqldb import Database
+
+QMediaPlayer = QtMultimedia.QMediaPlayer
+QMediaPlaylist = QtMultimedia.QMediaPlaylist
+QMediaContent = QtMultimedia.QMediaContent
 
 
 class UiMainWindow(QtWidgets.QMainWindow):
@@ -23,15 +25,16 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
         super().__init__()
         self.setWindowFlags(QtCore.Qt.WindowCloseButtonHint | QtCore.Qt.WindowMinimizeButtonHint)
-        mixer.init()  # For the volume
 
         # Initiating the music player
-        self.player = QtMultimedia.QMediaPlayer()
+        self.playlist = QMediaPlaylist()
+        self.player = QMediaPlayer()
         self.player.mediaStatusChanged.connect(self.status_changed)
-		self.player.stateChanged.connect(self.state_changed)
-		self.player.positionChanged.connect(self.position_changed)
-		self.player.volumeChanged.connect(self.volume_changed)
-		self.player.setVolume(60)
+        self.player.stateChanged.connect(self.state_changed)
+        self.player.positionChanged.connect(self.position_changed)
+        self.player.volumeChanged.connect(self.volume_changed)
+        self.player.setVolume(60)
+        self.player.setPlaylist(self.playlist)
         self.state = None  # -1 -> stopped; 0 -> paused; 1 -> playing;
 
         # Initializing the GUI
@@ -122,7 +125,6 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.ui_song_list.itemClicked.connect(self.play_song)  # This function will be called when an audio gets clicked
         self.centralframe.addWidget(self.ui_song_list)  # Adding the audio list widget to the interface
         self.get_saved_music()  # Adding all the previously saved music
-        self.paused = False
         self.show()
 
     def set_box_frame(self, frame):
@@ -144,8 +146,8 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
     def state_changed(self):
         pass
-
-    def position_changed(self):
+        
+    def position_changed(self, pos, stype=False):
         pass
 
     def volume_changed(self):
@@ -153,28 +155,33 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
     def get_saved_music(self):
         '''Adds the songs that are in the database'''
-        audio_names = database.extract_audio()
-        if isinstance(audio_names, list):  # If there are more songs
-            for audio in audio_names:
-                self.add_image(self.ui_song_list, audio[0], self.icon)
-                self.audio_paths[audio[0]] = audio[1]  # Unpacking the tuple
-        self.all_audios = self.ui_song_list.findItems('', QtCore.Qt.MatchContains)
+        audios = database.extract_audio()
+        if isinstance(audios, list):  # If there are more songs
+            for name, path in audios:
+                self.add_image(self.ui_song_list, name, self.icon)
+                self.audio_paths[name] = path
+                media = list(map(lambda x:QMediaContent(QtCore.QUrl(x)), self.audio_paths.values()))
+                self.playlist.addMedia(media)
+        # Updating
+        self.audio_widgets = self.ui_song_list.findItems('', QtCore.Qt.MatchContains)
+        self.all_audios = list(map(lambda x: x.text(), self.audio_widgets))  # Extracting audio names
 
     def play_song(self, selected_audio):
         '''This is called when a song is clicked'''
-        self.paused = False
+        print('play_song::', selected_audio)
+        self.state = 1
         self.current_audio = selected_audio.text()  # Setting the new audio
-        self.player.stop()              
-        self.config_audio(audio=self.current_audio)
+        self.player.stop()  
+        audio_index = self.all_audios.index(self.current_audio)          
+        self.playlist.setCurrentIndex(audio_index)
         self.player.play()
-        self.play_pause_button.setText('Pause')  # Button caption
 
     def play_pause_song(self):
         '''The event for the 'Pause' button'''
         if not self.current_audio:  # If no audio is chosen, just the first one
             self.default_song()  # This calls/plays the first audio
         else:
-            if self.player.is_playing():  # If any sound is playing
+            if self.player.state() == QMediaPlayer.PlayingState:  # If any sound is playing
                 self.player.pause()
                 self.paused = True
                 self.play_pause_button.setText('Play')  # Button caption
@@ -186,43 +193,21 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
     def stop_song(self):
         '''Stops the current playing audio'''
-        self.paused = True
+        self.state = 0
         self.player.stop()
         self.play_pause_button.setText('Play')  # 'Play' button caption
 
     def previous_song(self):
-        '''Loops over the songs to find the previous one then play it'''
-        self.player.stop()
-        
-        previous = None  # Temporary variable
-        if self.current_audio:
-            self.player.stop()
-            if self.current_audio == self.all_audios[0].text():  # To play the last song if the first one is playing
-                previous = self.all_audios[-1]
-            else:
-                for audio in self.all_audios:
-                    if audio.text() == self.current_audio:
-                        break  # This basically stops the loop when done
-                    previous = audio
-            self.ui_song_list.setCurrentItem(previous)
-            self.current_audio = previous.text()
-            self.play_song(previous)
+        '''Plays the previous song, in the order it was added'''
+
+        playlist = self.player.playlist()
+        playlist.previous()
 
     def next_song(self):
-        '''Loops over the songs to find the next one then play it'''
-        if self.current_audio:
-            try:  # Error will be raised for the last song
-                self.player.stop()
-                for count, song in enumerate(self.all_audios):
-                    if song.text() == self.current_audio:
-                        next_audio = self.all_audios[count+1]
-                        self.current_audio = next_audio.text()  # Makes the next audio play
-                        self.ui_song_list.setCurrentItem(next_audio)
-                        self.play_song(next_audio)
-                        break  # To prevent the loop from going after finishing it's purpose
+        '''Plays the next audio'''
 
-            except IndexError:  # Will raise when the last song is skipped
-                self.default_song()  # Plays the first audio
+        playlist = self.player.playlist()
+        playlist.next()
 
     def restart_song(self):
         '''Restarts the player'''
@@ -233,7 +218,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         '''Removes the audio from the ui and database'''
         self.player.stop()
         for audio in self.all_audios:
-            if audio.text() == self.current_audio:
+            if audio == self.current_audio:
                 database.delete_audio(self.current_audio)
                 self.audio_paths.pop(self.current_audio)
                 self.all_audios.remove(audio)
@@ -256,31 +241,24 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
     def time_hit(self):
         '''This tracks and updates the time of the song and it's length'''
-        if self.player.is_playing():
-            length = str(timedelta(seconds=self.player.get_length() // 1000))  # miliseconds to seconds
-            current_time = str(timedelta(seconds = self.player.get_time() // 1000))
+        if self.player.state() == QMediaPlayer.PlayingState:
+            length = str(timedelta(seconds=self.player.duration() // 1000))  # miliseconds to seconds
+            current_time = str(timedelta(seconds = self.player.position() // 1000))
             self.time_label.setText(str(current_time))
             self.time_length_label.setText(str(length))
 
-            self.time_slider.setValue(self.player.get_position()*10000) # update slide bar
+            self.time_slider.setValue(self.player.position()*10000) # update slide bar
         else:
             sleep(1)
 
-    def slider_moved(self):
-        '''This is called when the user moves the slider, and it prevents blurry audio'''
-        try:
-            if self.player.is_playing():  # If any sound is playing
-                self.player.pause()                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
-            self.player.set_position(self.time_slider.value()/10000)
-            if not self.player.is_playing():  # If any sound is playing
-                self.player.play()
-        except Exception as e:
-            print(e)
+    def slider_moved(self, pos):
+        '''This is called when the user moves the slider'''                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+        self.player.setPosition(pos)
 
-    def slider_changed(self):
+    def slider_changed(self, pos):
         '''This is called when the song time slider is moved'''
-        if self.player.is_playing():  # If any song is playing
-            self.time_slider.setValue(round(self.player.get_position()*10000, 2))
+        if self.player.state() == QMediaPlayer.PlayingState:  # If any song is playing
+            self.time_slider.setValue(position)
             self.player.set_position(self.time_slider.value()/10000)
 
     def volume(self, _=None):  # _ is an unused argument that is passed
@@ -301,7 +279,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         '''A thread function that will play the next song when the current one is done'''
         while self.auto_next:
             if self.checkbox.isChecked():
-                if self.player.is_playing() or self.paused:
+                if self.player.state() == QMediaPlayer.PlayingState or self.paused:
                     sleep(1)  # To have a slight delay
                 else:
                     self.next_song()
