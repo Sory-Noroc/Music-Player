@@ -140,9 +140,16 @@ class UiMainWindow(QtWidgets.QMainWindow):
         ''' Signal method triggered when the player state changes ex. playing -> stopped '''
         pass
         
-    def position_changed(self, pos):
+    def position_changed(self, pos, is_playing=True):
         '''This is called when the player emits audio'''
-        self.time_slider.setValue(pos)
+        if is_playing == True:  # The explicit way
+            self.time_slider.setValue(pos)
+        # The position() method returns miliseconds, so we convert them to seconds
+        current_time = str(timedelta(seconds = self.player.position()//1000))
+        length = str(timedelta(seconds=self.player.duration()//1000))
+
+        self.time_label.setText(str(current_time))
+        self.time_length_label.setText(str(length))
 
     def add_to_playlist(self, audio_path):
         ''' Adds the audio with the given path to the playlist '''
@@ -236,26 +243,13 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.add_image(self.ui_song_list, audio_name, self.icon)
         database.insert_in_table((audio_name, audio_path))  # Inserting the audio
 
-    def time_hit(self):
-        '''This tracks and updates the time of the song and it's length'''
-
-        if self.player.state() == QMediaPlayer.PlayingState:
-
-            length = str(timedelta(seconds=self.player.duration()//1000))  # miliseconds to seconds
-            current_time = str(timedelta(seconds = self.player.position()//1000))
-
-            self.time_label.setText(str(current_time))
-            self.time_length_label.setText(str(length))
-            
-            self.time_slider.setValue(self.player.position()) # update slide bar
-
     def slider_moved(self, pos):
-        '''This is called when the user moves the slider'''
-        if self.player.isSeekable():                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+        ''' This is called when the user moves the slider '''
+        if self.player.isSeekable():
             self.player.setPosition(pos)
 
     def default_song(self):
-        '''Assigns the first song of the list'''
+        ''' Assigns the first song of the list '''
         try:  # Can raise an exception if no music was added
             self.current_audio = self.all_audios[0].text()
             self.ui_song_list.setCurrentItem(self.all_audios[0])
@@ -267,7 +261,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.player.setVolume(pos)
 
     def retranslate_ui(self, main_window):
-        '''Setting the text for all the buttons and labels'''
+        ''' Setting the text for all the buttons and labels '''
         main_window.setCentralWidget(self.centralwidget)
         main_window.setWindowTitle("MP3 Player")
         self.play_pause_button.setText("Play")
