@@ -103,7 +103,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.volume_slider.valueChanged.connect(self.volume)
 
         self.time_slider.setMinimum(0)
-        self.time_slider.setMaximum(10000)
+        self.time_slider.setMaximum(100)
         self.time_slider.setValue(0)
         self.time_slider.setSingleStep(1)
         self.time_slider.setOrientation(QtCore.Qt.Horizontal)
@@ -147,8 +147,11 @@ class UiMainWindow(QtWidgets.QMainWindow):
     def state_changed(self):
         pass
         
-    def position_changed(self, pos, stype=False):
-        pass
+    def position_changed(self, pos):
+        '''This is called when the song time slider is moved'''
+        if self.player.state() == self.player.PlayingState:  # If any song is playing
+            if self.player.isSeekable():  # If any song was added
+                self.time_slider.setValue(pos)
 
     def volume_changed(self):
         pass
@@ -170,6 +173,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         '''This is called when a song is clicked'''
         print('play_song::', selected_audio)
         self.state = 1
+        self.time_slider.setMaximum(self.player.duration())
         self.current_audio = selected_audio.text()  # Setting the new audio
         self.player.stop()  
         audio_index = self.all_audios.index(self.current_audio)          
@@ -241,25 +245,20 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
     def time_hit(self):
         '''This tracks and updates the time of the song and it's length'''
+
         if self.player.state() == QMediaPlayer.PlayingState:
-            length = str(timedelta(seconds=self.player.duration() // 1000))  # miliseconds to seconds
-            current_time = str(timedelta(seconds = self.player.position() // 1000))
+
+            length = str(timedelta(seconds=self.player.duration()//1000))  # miliseconds to seconds
+            current_time = str(timedelta(seconds = self.player.position()//1000))
+
             self.time_label.setText(str(current_time))
             self.time_length_label.setText(str(length))
-
-            self.time_slider.setValue(self.player.position()*10000) # update slide bar
-        else:
-            sleep(1)
+            
+            self.time_slider.setValue(self.player.position()) # update slide bar
 
     def slider_moved(self, pos):
         '''This is called when the user moves the slider'''                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
-        self.player.setPosition(pos)
-
-    def slider_changed(self, pos):
-        '''This is called when the song time slider is moved'''
-        if self.player.state() == QMediaPlayer.PlayingState:  # If any song is playing
-            self.time_slider.setValue(position)
-            self.player.set_position(self.time_slider.value()/10000)
+        self.player.seek(pos)
 
     def volume(self, _=None):  # _ is an unused argument that is passed
         self.player.audio_set_volume(self.volume_slider.value())
