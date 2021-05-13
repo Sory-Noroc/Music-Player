@@ -20,7 +20,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
     
     width = 15
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         # Next we add the minimize and close buttons to the window
 
         super().__init__()
@@ -118,13 +118,13 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.get_saved_music()  # Adding all the previously saved music
         self.show()
 
-    def set_box_frame(self, frame):
+    def set_box_frame(self, frame, *args, **kwargs):
         '''For creating the main frames'''
         widget = QtWidgets.QWidget()
         widget.setLayout(frame)
         self.centralframe.addWidget(widget)
 
-    def add_image(self, list_widget, text, icon):
+    def add_image(self, list_widget, text, icon, *args, **kwargs):
         '''Adds the image to each added song'''
         item = QtWidgets.QListWidgetItem(icon, text)  # Making a list item with both an image and song
         size = QtCore.QSize()
@@ -132,15 +132,15 @@ class UiMainWindow(QtWidgets.QMainWindow):
         item.setSizeHint(size)
         list_widget.addItem(item)
 
-    def status_changed(self):
+    def status_changed(self, *args, **kwargs):
         ''' Signal method triggered when the player status changes ex. noMedia -> Media '''
         pass
 
-    def state_changed(self):
+    def state_changed(self, *args, **kwargs):
         ''' Signal method triggered when the player state changes ex. playing -> stopped '''
         pass
         
-    def position_changed(self, pos, is_playing=True):
+    def position_changed(self, pos, is_playing=True, *args, **kwargs):
         '''This is called when the player emits audio'''
         if is_playing == True:  # The explicit way
             self.time_slider.setValue(pos)
@@ -151,12 +151,12 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.time_label.setText(str(current_time))
         self.time_length_label.setText(str(length))
 
-    def add_to_playlist(self, audio_path):
+    def add_to_playlist(self, audio_path, *args, **kwargs):
         ''' Adds the audio with the given path to the playlist '''
         media = QMediaContent(QtCore.QUrl(audio_path))
         self.playlist.addMedia(media)
 
-    def get_saved_music(self):
+    def get_saved_music(self, *args, **kwargs):
         '''Adds the songs that are in the database'''
         audios = database.extract_audio()
         if isinstance(audios, list):  # If there are more songs
@@ -168,7 +168,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.audio_widgets = self.ui_song_list.findItems('', QtCore.Qt.MatchContains)
         self.all_audios = list(map(lambda x: x.text(), self.audio_widgets))  # Extracting audio names
 
-    def play_song(self, selected_audio):
+    def play_song(self, selected_audio, *args, **kwargs):
         '''This is called when a song is clicked'''
         print('play_song::', selected_audio)
         self.state = 1
@@ -179,7 +179,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.playlist.setCurrentIndex(audio_index)
         self.player.play()
 
-    def play_pause_song(self):
+    def play_pause_song(self, *args, **kwargs):
         '''The event for the 'Pause' button'''
         if not self.current_audio:  # If no audio is chosen, just the first one
             self.default_song()  # This calls/plays the first audio
@@ -194,28 +194,28 @@ class UiMainWindow(QtWidgets.QMainWindow):
                 self.state = 1
                 self.player.play()
 
-    def stop_song(self):
+    def stop_song(self, *args, **kwargs):
         '''Stops the current playing audio'''
         self.state = 0
         self.player.stop()
         self.play_pause_button.setText('Play')  # 'Play' button caption
 
-    def previous_song(self):
+    def previous_song(self, *args, **kwargs):
         '''Plays the previous song, in the order it was added'''
         playlist = self.player.playlist()
         playlist.previous()
 
-    def next_song(self):
+    def next_song(self, *args, **kwargs):
         '''Plays the next audio'''
         playlist = self.player.playlist()
         playlist.next()
 
-    def restart_song(self):
+    def restart_song(self, *args, **kwargs):
         '''Restarts the player'''
         self.stop_song()
         self.player.play()  # Replay
 
-    def remove_song(self):
+    def remove_song(self, *args, **kwargs):
         '''Removes the audio from the ui and database'''
         self.player.stop()
         for audio in self.all_audios:
@@ -227,7 +227,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
                 self.ui_song_list.takeItem(self.ui_song_list.currentRow())
                 break
 
-    def add_song(self):
+    def add_song(self, *args, **kwargs):
         '''Asks for mp3 and wav files then adds them to db and ui'''
         Tk().withdraw()  # Creating the interface for choosing songs
         filetypes = [('mp3 files', '*.mp3'), ('wav files', '*.wav')]  # Only audio should pe added
@@ -243,12 +243,12 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.add_image(self.ui_song_list, audio_name, self.icon)
         database.insert_in_table((audio_name, audio_path))  # Inserting the audio
 
-    def slider_moved(self, pos):
+    def slider_moved(self, pos, *args, **kwargs):
         ''' This is called when the user moves the slider '''
         if self.player.isSeekable():
             self.player.setPosition(pos)
 
-    def default_song(self):
+    def default_song(self, *args, **kwargs):
         ''' Assigns the first song of the list '''
         try:  # Can raise an exception if no music was added
             self.current_audio = self.all_audios[0].text()
@@ -257,10 +257,10 @@ class UiMainWindow(QtWidgets.QMainWindow):
         except IndexError:
             pass  # Do nothing if buttons are clicked, while there are no songs
 
-    def set_volume(self, pos):
+    def set_volume(self, pos, *args, **kwargs):
         self.player.setVolume(pos)
 
-    def retranslate_ui(self, main_window):
+    def retranslate_ui(self, main_window, *args, **kwargs):
         ''' Setting the text for all the buttons and labels '''
         main_window.setCentralWidget(self.centralwidget)
         main_window.setWindowTitle("MP3 Player")
