@@ -174,11 +174,14 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
     def play_song(self, selected_audio, *args, **kwargs):
         '''This is called when a song is clicked'''
+        print('all_audios:', self.all_audios)
         self.state = 1
         current_audio = selected_audio.text()  # Setting the new audi
         self.player.stop()  
-        audio_index = self.all_audios.index(current_audio)          
+        audio_index = self.all_audios.index(current_audio)
+        print('index', audio_index)         
         self.playlist.setCurrentIndex(audio_index)
+        print(self.playlist.children())
         self.time_slider.setMaximum(self.player.duration())
         self.player.play()
 
@@ -238,11 +241,9 @@ class UiMainWindow(QtWidgets.QMainWindow):
             path, ext = os.path.splitext(audio_path)  # taking only the audio path without the extension
             audio_name = os.path.basename(path)                                                                                                                                                                                                                                                   
             self.audio_paths[audio_name] = audio_path
-            self.all_audios.append(audio_path)
+            self.all_audios.append(audio_name)
             self.add_to_playlist(audio_path)
         # Updating
-        self.audio_widgets = self.ui_song_list.findItems('', QtCore.Qt.MatchContains)
-        self.all_audios = list(map(lambda x: x.text(), self.audio_widgets))  # Extracting audio names
         self.add_image(self.ui_song_list, audio_name, self.icon)
         database.insert_in_table((audio_name, audio_path))  # Inserting the audio
 
