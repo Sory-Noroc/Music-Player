@@ -111,6 +111,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
         icon_path = os.path.join('.', 'images/note.png')
         self.icon = QtGui.QIcon(icon_path)
+        self.duration = 0
         self.ui_song_list.setEnabled(True)
         self.ui_song_list.setStyleSheet('background-color: lightgray;')
         self.ui_song_list.itemClicked.connect(self.play_song)  # This function will be called when an audio gets clicked
@@ -143,9 +144,12 @@ class UiMainWindow(QtWidgets.QMainWindow):
     def position_changed(self, pos, is_playing=True, *args, **kwargs):
         '''This is called when the player emits audio'''
         if is_playing == True:  # The explicit way
+            if self.duration != self.player.duration():
+                self.duration = self.player.duration()
+                self.time_slider.setMaximum(self.duration)
             self.time_slider.setValue(pos)
         # The position() method returns miliseconds, so we convert them to seconds
-        current_time = str(timedelta(seconds = self.player.position()//1000))
+        current_time = str(timedelta(seconds=self.player.position()//1000))
         length = str(timedelta(seconds=self.player.duration()//1000))
 
         self.time_label.setText(str(current_time))
@@ -170,13 +174,12 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
     def play_song(self, selected_audio, *args, **kwargs):
         '''This is called when a song is clicked'''
-        print('play_song::', selected_audio)
         self.state = 1
-        self.time_slider.setMaximum(self.player.duration())
-        self.current_audio = selected_audio.text()  # Setting the new audio
+        current_audio = selected_audio.text()  # Setting the new audi
         self.player.stop()  
-        audio_index = self.all_audios.index(self.current_audio)          
+        audio_index = self.all_audios.index(current_audio)          
         self.playlist.setCurrentIndex(audio_index)
+        self.time_slider.setMaximum(self.player.duration())
         self.player.play()
 
     def play_pause_song(self, *args, **kwargs):
@@ -202,8 +205,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
     def previous_song(self, *args, **kwargs):
         '''Plays the previous song, in the order it was added'''
-        playlist = self.player.playlist()
-        playlist.previous()
+        print(self.playlist.previous())
 
     def next_song(self, *args, **kwargs):
         '''Plays the next audio'''
@@ -236,6 +238,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
             path, ext = os.path.splitext(audio_path)  # taking only the audio path without the extension
             audio_name = os.path.basename(path)                                                                                                                                                                                                                                                   
             self.audio_paths[audio_name] = audio_path
+            self.all_audios.append(audio_path)
             self.add_to_playlist(audio_path)
         # Updating
         self.audio_widgets = self.ui_song_list.findItems('', QtCore.Qt.MatchContains)
