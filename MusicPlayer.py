@@ -221,16 +221,16 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.player.play()  # Replay
 
     def remove_song(self, *args, **kwargs):
-        '''Removes the audio from the ui and database'''
+        '''Removes the audio from the ui, all_audios and database'''
         self.player.stop()
-        for audio in self.all_audios:
-            if audio == self.current_audio:
-                database.delete_audio(self.current_audio)
-                self.audio_paths.pop(self.current_audio)
-                self.all_audios.remove(audio)
-                # Next, removing from the GUI list
-                self.ui_song_list.takeItem(self.ui_song_list.currentRow())
-                break
+        # if there was any audio in the playlist
+        index = self.playlist.currentIndex()
+        media = self.playlist.currentMedia().canonicalUrl()
+        if self.playlist.removeMedia(index):
+            database.delete_audio(self.current_audio)
+            self.all_audios.remove(audio)
+            # Next, removing from the GUI list
+            self.ui_song_list.takeItem(self.ui_song_list.currentRow())
 
     def add_song(self, *args, **kwargs):
         '''Asks for mp3 and wav files then adds them to db and ui'''
@@ -238,8 +238,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         filetypes = [('mp3 files', '*.mp3'), ('wav files', '*.wav')]  # Only audio should pe added
         audios_list = filedialog.askopenfilenames(title='Choose audio files', filetypes=filetypes)
         for audio_path in audios_list:
-            path, ext = os.path.splitext(audio_path)  # taking only the audio path without the extension
-            audio_name = os.path.basename(path)                                                                                                                                                                                                                                                   
+            audio_name = self.convert_filename(audio_path)                                                                                                                                                                                                                                               
             self.audio_paths[audio_name] = audio_path
             self.all_audios.append(audio_name)
             self.add_to_playlist(audio_path)
@@ -279,6 +278,13 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.time_length_label.setText('0:00:00')
         self.title.setText("MP3 Player")
         # self.volume_label.setText("Volume")
+
+    @staticmethod
+    def convert_filename(path):
+        ''' Converts file path to file name without extension '''
+        pathpart, ext = os.path.splitext(path)  # taking only the audio path without the extension
+        audio_name = os.path.basename(pathpart)
+        return audio_name
 
 if __name__ == "__main__":
     import sys
