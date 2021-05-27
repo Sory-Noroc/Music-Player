@@ -51,7 +51,6 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.play_pause_button = QtWidgets.QPushButton(self.centralwidget)
         self.stop_button = QtWidgets.QPushButton(self.centralwidget)
         self.add_new_song_button = QtWidgets.QPushButton(self.centralwidget)
-        self.remove_song_button = QtWidgets.QPushButton(self.centralwidget)
         self.restart_button = QtWidgets.QPushButton(self.centralwidget)
         self.next_button = QtWidgets.QPushButton(self.centralwidget)
         self.previous_button = QtWidgets.QPushButton(self.centralwidget)
@@ -63,7 +62,6 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.ui_song_list = QtWidgets.QListWidget(self.centralwidget)
 
         self.current_audio = ''  # To prevent errors when trying to play nothing
-        self.audio_paths = {}  # This will be needed when running the audio
         self.retranslate_ui(self)
         QtCore.QMetaObject.connectSlotsByName(self)
 
@@ -78,7 +76,6 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.play_pause_button.clicked.connect(self.play_pause_song)
         self.stop_button.clicked.connect(self.stop_song)
         self.add_new_song_button.clicked.connect(self.add_song)
-        self.remove_song_button.clicked.connect(self.remove_song)
         self.restart_button.clicked.connect(self.restart_song)
         self.next_button.clicked.connect(self.next_song)
         self.previous_button.clicked.connect(self.previous_song)
@@ -90,7 +87,6 @@ class UiMainWindow(QtWidgets.QMainWindow):
         button_frame.addWidget(self.play_pause_button)
         button_frame.addWidget(self.next_button)
         button_frame.addWidget(self.restart_button)
-        button_frame.addWidget(self.remove_song_button)
 
         self.volume_slider.setMinimum(0)
         self.volume_slider.setMaximum(100)
@@ -166,7 +162,6 @@ class UiMainWindow(QtWidgets.QMainWindow):
         if isinstance(audios, list):  # If there are more songs
             for name, path in audios:
                 self.add_image(self.ui_song_list, name, self.icon)
-                self.audio_paths[name] = path
                 self.add_to_playlist(path)
         # Updating
         self.audio_widgets = self.ui_song_list.findItems('', QtCore.Qt.MatchContains)
@@ -174,20 +169,20 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
     def play_song(self, selected_audio, *args, **kwargs):
         '''This is called when a song is clicked'''
-        print('all_audios:', self.all_audios)
         self.state = 1
-        current_audio = selected_audio.text()  # Setting the new audi
+        current_audio = selected_audio.text()  # Setting the new audio
+        print('current:', current_audio)
         self.player.stop()  
         audio_index = self.all_audios.index(current_audio)
+        print('all_audios:', self.all_audios)
         print('index', audio_index)         
         self.playlist.setCurrentIndex(audio_index)
         print(self.playlist.children())
-        self.time_slider.setMaximum(self.player.duration())
         self.player.play()
 
     def play_pause_song(self, *args, **kwargs):
         '''The event for the 'Pause' button'''
-        if not self.current_audio:  # If no audio is chosen, just the first one
+        if not self.player.currentMedia():  # If no audio is chosen, just the first one
             self.default_song()  # This calls/plays the first audio
         else:
             if self.player.state() == QMediaPlayer.PlayingState:  # If any sound is playing
@@ -225,12 +220,13 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.player.stop()
         # if there was any audio in the playlist
         index = self.playlist.currentIndex()
-        media = self.playlist.currentMedia().canonicalUrl()
+        mediapath = self.playlist.currentMedia().canonicalUrl().fileName()
+        curmedia = self.convert_filename(mediapath)
         if self.playlist.removeMedia(index):
-            database.delete_audio(self.current_audio)
-            self.all_audios.remove(audio)
+            database.delete_audio(curmedia)
+            self.all_audios.remove(curmedia)
             # Next, removing from the GUI list
-            self.ui_song_list.takeItem(self.ui_song_list.currentRow())
+            self.ui_song_list.takeItem(index)
 
     def add_song(self, *args, **kwargs):
         '''Asks for mp3 and wav files then adds them to db and ui'''
@@ -238,13 +234,12 @@ class UiMainWindow(QtWidgets.QMainWindow):
         filetypes = [('mp3 files', '*.mp3'), ('wav files', '*.wav')]  # Only audio should pe added
         audios_list = filedialog.askopenfilenames(title='Choose audio files', filetypes=filetypes)
         for audio_path in audios_list:
-            audio_name = self.convert_filename(audio_path)                                                                                                                                                                                                                                               
-            self.audio_paths[audio_name] = audio_path
+            audio_name = self.convert_filename(audio_path)
             self.all_audios.append(audio_name)
             self.add_to_playlist(audio_path)
-        # Updating
-        self.add_image(self.ui_song_list, audio_name, self.icon)
-        database.insert_in_table((audio_name, audio_path))  # Inserting the audio
+            # Updating
+            self.add_image(self.ui_song_list, audio_name, self.icon)
+            database.insert_in_table((audio_name, audio_path))  # Inserting the audio
 
     def slider_moved(self, pos, *args, **kwargs):
         ''' This is called when the user moves the slider '''
@@ -270,7 +265,6 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.play_pause_button.setText("Play")
         self.stop_button.setText("Stop")
         self.add_new_song_button.setText("Add Songs")
-        self.remove_song_button.setText("Remove")
         self.restart_button.setText("Restart")
         self.next_button.setText("Next")
         self.previous_button.setText("Previous")
