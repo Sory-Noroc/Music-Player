@@ -3,6 +3,7 @@
 # The program was designed in Windows
 
 import os
+import sys
 from threading import Thread
 from PyQt5 import QtCore, QtGui, QtWidgets, QtMultimedia
 from tkinter import Tk, filedialog
@@ -28,6 +29,14 @@ class ListWidget(QtWidgets.QListWidget):
         # add other required actions
         self.menu.popup(QtGui.QCursor.pos())
         # return super().contextMenuEvent(a0)
+
+    def remove(self, event, *args, **kwargs):
+        '''Removes the audio from the ui, all_audios and database'''
+
+        # row = self.rowAt(event.pos().y())
+        index = self.indexFromItem(self.itemAt(event.pos().x(), event.pos().y())).row()
+        print('remove index: ', index)
+        ui.delete_audio(index)  # To finish the deletion from the ui and database
 
 class UiMainWindow(QtWidgets.QMainWindow):
     ''' Main class that builds the music player'''
@@ -181,6 +190,17 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.audio_widgets = self.ui_song_list.findItems('', QtCore.Qt.MatchContains)
         self.all_audios = list(map(lambda x: x.text(), self.audio_widgets))  # Extracting audio names
 
+    def delete_audio(self, index):
+        self.player.stop()
+        # if there was any audio in the playlist
+        mediapath = self.playlist.currentMedia().canonicalUrl().fileName()
+        curmedia = self.convert_filename(mediapath)
+        if self.playlist.removeMedia(index):
+            database.delete_audio(curmedia)
+            self.all_audios.remove(curmedia)
+            # Next, removing from the GUI list
+            self.ui_song_list.takeItem(index)
+
     def audio_clicked(self, selected_audio, *args, **kwargs):
         '''This is called when a song is clicked'''
         self.state = 1
@@ -226,19 +246,6 @@ class UiMainWindow(QtWidgets.QMainWindow):
         '''Restarts the player'''
         self.stop_song()
         self.player.play()  # Replay
-
-    def remove_song(self, *args, **kwargs):
-        '''Removes the audio from the ui, all_audios and database'''
-        self.player.stop()
-        # if there was any audio in the playlist
-        index = self.playlist.currentIndex()
-        mediapath = self.playlist.currentMedia().canonicalUrl().fileName()
-        curmedia = self.convert_filename(mediapath)
-        if self.playlist.removeMedia(index):
-            database.delete_audio(curmedia)
-            self.all_audios.remove(curmedia)
-            # Next, removing from the GUI list
-            self.ui_song_list.takeItem(index)
 
     def add_song(self, *args, **kwargs):
         '''Asks for mp3 and wav files then adds them to db and ui'''
@@ -293,7 +300,6 @@ class UiMainWindow(QtWidgets.QMainWindow):
         return audio_name
 
 if __name__ == "__main__":
-    import sys
     database = Database(os.path.abspath('music_database.db'))  # Creating/opening the database file
     app = QtWidgets.QApplication(sys.argv)
     # Creating the app background, with an image
