@@ -15,6 +15,20 @@ QMediaPlaylist = QtMultimedia.QMediaPlaylist
 QMediaContent = QtMultimedia.QMediaContent
 
 
+class ListWidget(QtWidgets.QListWidget):
+    ''' Class for the modified list widget, that is able to respond to right clicks '''
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
+        self.menu = QtWidgets.QMenu(self)
+        renameAction = QtWidgets.QAction('Remove', self)
+        renameAction.triggered.connect(lambda: self.remove(event))
+        self.menu.addAction(renameAction)
+        # add other required actions
+        self.menu.popup(QtGui.QCursor.pos())
+        # return super().contextMenuEvent(a0)
+
 class UiMainWindow(QtWidgets.QMainWindow):
     ''' Main class that builds the music player'''
     
@@ -27,8 +41,8 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.setWindowFlags(QtCore.Qt.WindowCloseButtonHint | QtCore.Qt.WindowMinimizeButtonHint)
 
         # Initiating the music player
-        self.playlist = QMediaPlaylist()
         self.player = QMediaPlayer()
+        self.playlist = QMediaPlaylist(self.player)
         self.player.mediaStatusChanged.connect(self.status_changed)
         self.player.stateChanged.connect(self.state_changed)
         self.player.positionChanged.connect(self.position_changed)
@@ -59,7 +73,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.time_label = QtWidgets.QLabel(self.centralwidget)
         self.time_length_label = QtWidgets.QLabel(self.centralwidget)
         self.title = QtWidgets.QLabel(self.centralwidget)
-        self.ui_song_list = QtWidgets.QListWidget(self.centralwidget)
+        self.ui_song_list = ListWidget(self.centralwidget)
 
         self.current_audio = ''  # To prevent errors when trying to play nothing
         self.retranslate_ui(self)
@@ -110,7 +124,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.duration = 0
         self.ui_song_list.setEnabled(True)
         self.ui_song_list.setStyleSheet('background-color: lightgray;')
-        self.ui_song_list.itemClicked.connect(self.play_song)  # This function will be called when an audio gets clicked
+        self.ui_song_list.itemClicked.connect(self.audio_clicked)  # This function will be called when an audio gets clicked
         self.centralframe.addWidget(self.ui_song_list)  # Adding the audio list widget to the interface
         self.get_saved_music()  # Adding all the previously saved music
         self.show()
@@ -167,17 +181,15 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.audio_widgets = self.ui_song_list.findItems('', QtCore.Qt.MatchContains)
         self.all_audios = list(map(lambda x: x.text(), self.audio_widgets))  # Extracting audio names
 
-    def play_song(self, selected_audio, *args, **kwargs):
+    def audio_clicked(self, selected_audio, *args, **kwargs):
         '''This is called when a song is clicked'''
         self.state = 1
         current_audio = selected_audio.text()  # Setting the new audio
         print('current:', current_audio)
         self.player.stop()  
-        audio_index = self.all_audios.index(current_audio)
-        print('all_audios:', self.all_audios)
-        print('index', audio_index)         
+        audio_index = self.ui_song_list.currentIndex().row()
+        print('index:', audio_index)         
         self.playlist.setCurrentIndex(audio_index)
-        print(self.playlist.children())
         self.player.play()
 
     def play_pause_song(self, *args, **kwargs):
@@ -251,7 +263,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         try:  # Can raise an exception if no music was added
             self.current_audio = self.all_audios[0].text()
             self.ui_song_list.setCurrentItem(self.all_audios[0])
-            self.play_song(self.all_audios[0])
+            self.audio_clicked(self.all_audios[0])
         except IndexError:
             pass  # Do nothing if buttons are clicked, while there are no songs
 
