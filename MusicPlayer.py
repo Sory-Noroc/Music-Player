@@ -157,14 +157,13 @@ class UiMainWindow(QtWidgets.QMainWindow):
         list_widget.addItem(item)
 
     def open_menu(self, pos):
-        popMenu = QtWidgets.QMenu()
+        menu = QtWidgets.QMenu()
         delete = QtWidgets.QAction("Delete audio",self)
         #Check if it is on the item when you right-click, if it is not, delete and modify will not be displayed.
-        if self.ui_song_list.itemAt(pos):
-            popMenu.addAction(delete)
-
+        # if self.ui_song_list.itemAt(pos):
+        menu.addAction(delete)
         delete.triggered.connect(self.delete_audio)
-        popMenu.exec_(self.ui_song_list.mapToGlobal(pos))
+        menu.exec_(self.ui_song_list.mapToGlobal(pos))
 
     def status_changed(self, *args, **kwargs):
         ''' Signal method triggered when the player status changes ex. noMedia -> Media '''
@@ -196,26 +195,30 @@ class UiMainWindow(QtWidgets.QMainWindow):
     def get_saved_music(self, *args, **kwargs):
         '''Adds the songs that are in the database'''
         audios = database.extract_audio()
+        paths = []
         if isinstance(audios, list):  # If there are more songs
             for name, path in audios:
                 self.add_image(self.ui_song_list, name, self.icon)
+                paths.append(path)
                 self.add_to_playlist(path)
         # Updating
         self.audio_widgets = self.ui_song_list.findItems('', QtCore.Qt.MatchContains)
-        self.all_audios = list(map(lambda x: x.text(), self.audio_widgets))  # Extracting audio names
+        song_path_zip = zip(self.audio_widgets, paths)
+        # self.all_audios = list(map(lambda x: x.text(), self.audio_widgets))  # Extracting audio names
+        self.all_audios = {k.text():v for k,v in song_path_zip}
 
     def delete_audio(self, loc):
         '''Removes the audio from the ui, all_audios and database'''
-
         self.player.stop()
         index = self.ui_song_list.currentRow() - 1
         print('remove index ', index)
-        if self.ui_song_list.itemAt(loc) and self.playlist.removeMedia(index):
-            mediapath = self.playlist.currentMedia().canonicalUrl().fileName()
-            curmedia = self.get_filename(mediapath)
+        if self.playlist.removeMedia(index):
+            curmedia = self.ui_song_list.currentItem().text()
+            mediapath = self.all_audios[curmedia]
             database.delete_audio(curmedia)
-            print(self.all_audios)
-            self.all_audios.remove(curmedia)
+            print(self.all_audios.keys())
+            print(curmedia)
+            self.all_audios.pop(curmedia)
             # Next, removing from the GUI list
             self.ui_song_list.takeItem(index)
 
@@ -272,7 +275,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         audios_list = filedialog.askopenfilenames(title='Choose audio files', filetypes=filetypes)
         for audio_path in audios_list:
             audio_name = self.get_filename(audio_path)
-            self.all_audios.append(audio_name)
+            self.all_audios[audio_name] = audio_path
             self.add_to_playlist(audio_path)
             # Updating
             self.add_image(self.ui_song_list, audio_name, self.icon)
@@ -285,12 +288,13 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
     def default_song(self, *args, **kwargs):
         ''' Assigns the first song of the list '''
-        try:  # Can raise an exception if no music was added
-            self.current_audio = self.all_audios[0].text()
-            self.ui_song_list.setCurrentItem(self.all_audios[0])
-            self.audio_clicked(self.all_audios[0])
-        except IndexError:
-            pass  # Do nothing if buttons are clicked, while there are no songs
+        print('default is empty!')
+        # try:  # Can raise an exception if no music was added
+        #     self.current_audio = self.all_audios.keys()[0]
+        #     self.ui_song_list.setCurrentItem(self.all_audios.keys()[0])
+        #     self.audio_clicked(self.all_audios[0])
+        # except IndexError:
+        #     pass  # Do nothing if buttons are clicked, while there are no songs
 
     def set_volume(self, pos, *args, **kwargs):
         self.player.setVolume(pos)
