@@ -16,27 +16,27 @@ QMediaPlaylist = QtMultimedia.QMediaPlaylist
 QMediaContent = QtMultimedia.QMediaContent
 
 
-class ListWidget(QtWidgets.QListWidget):
-    ''' Class for the modified list widget, that is able to respond to right clicks '''
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+# class ListWidget(QtWidgets.QListWidget):
+#     ''' Class for the modified list widget, that is able to respond to right clicks '''
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
 
-    def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
-        self.menu = QtWidgets.QMenu(self)
-        renameAction = QtWidgets.QAction('Remove', self)
-        renameAction.triggered.connect(lambda: self.remove(event))
-        self.menu.addAction(renameAction)
-        # add other required actions
-        self.menu.popup(QtGui.QCursor.pos())
-        # return super().contextMenuEvent(a0)
+#     def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
+#         self.menu = QtWidgets.QMenu(self)
+#         renameAction = QtWidgets.QAction('Remove', self)
+#         renameAction.triggered.connect(lambda: self.remove(event))
+#         self.menu.addAction(renameAction)
+#         # add other required actions
+#         self.menu.popup(QtGui.QCursor.pos())
+#         # return super().contextMenuEvent(a0)
 
-    def remove(self, event, *args, **kwargs):
-        '''Removes the audio from the ui, all_audios and database'''
+#     def remove(self, event, *args, **kwargs):
+#         '''Removes the audio from the ui, all_audios and database'''
 
-        # row = self.rowAt(event.pos().y())
-        index = self.indexFromItem(self.itemAt(event.pos().x(), event.pos().y())).row()
-        print('remove index: ', index)
-        ui.delete_audio(index)  # To finish the deletion from the ui and database
+#         # row = self.rowAt(event.pos().y())
+#         index = self.indexFromItem(self.itemAt(event.pos().x(), event.pos().y())).row()
+#         print('remove index: ', index)
+#         ui.delete_audio(index)  # To finish the deletion from the ui and database
 
 class UiMainWindow(QtWidgets.QMainWindow):
     ''' Main class that builds the music player'''
@@ -82,7 +82,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.time_label = QtWidgets.QLabel(self.centralwidget)
         self.time_length_label = QtWidgets.QLabel(self.centralwidget)
         self.title = QtWidgets.QLabel(self.centralwidget)
-        self.ui_song_list = ListWidget(self.centralwidget)
+        self.ui_song_list = QtWidgets.QListWidget(self.centralwidget)
 
         self.current_audio = ''  # To prevent errors when trying to play nothing
         self.retranslate_ui(self)
@@ -134,6 +134,10 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.ui_song_list.setEnabled(True)
         self.ui_song_list.setStyleSheet('background-color: lightgray;')
         self.ui_song_list.itemClicked.connect(self.audio_clicked)  # This function will be called when an audio gets clicked
+        self.ui_song_list.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        #Right-click menu
+        self.ui_song_list.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.ui_song_list.customContextMenuRequested.connect(self.open_menu)
         self.centralframe.addWidget(self.ui_song_list)  # Adding the audio list widget to the interface
         self.get_saved_music()  # Adding all the previously saved music
         self.show()
@@ -151,6 +155,16 @@ class UiMainWindow(QtWidgets.QMainWindow):
         size.setHeight(100)
         item.setSizeHint(size)
         list_widget.addItem(item)
+
+    def open_menu(self, pos):
+        popMenu = QtWidgets.QMenu()
+        delete = QtWidgets.QAction("Delete audio",self)
+        #Check if it is on the item when you right-click, if it is not, delete and modify will not be displayed.
+        if self.ui_song_list.itemAt(pos):
+            popMenu.addAction(delete)
+
+        delete.triggered.connect(self.delete_audio)
+        popMenu.exec_(self.ui_song_list.mapToGlobal(pos))
 
     def status_changed(self, *args, **kwargs):
         ''' Signal method triggered when the player status changes ex. noMedia -> Media '''
@@ -190,13 +204,17 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.audio_widgets = self.ui_song_list.findItems('', QtCore.Qt.MatchContains)
         self.all_audios = list(map(lambda x: x.text(), self.audio_widgets))  # Extracting audio names
 
-    def delete_audio(self, index):
+    def delete_audio(self, loc):
+        '''Removes the audio from the ui, all_audios and database'''
+
         self.player.stop()
-        # if there was any audio in the playlist
-        mediapath = self.playlist.currentMedia().canonicalUrl().fileName()
-        curmedia = self.convert_filename(mediapath)
-        if self.playlist.removeMedia(index):
+        index = self.ui_song_list.currentRow() - 1
+        print('remove index ', index)
+        if self.ui_song_list.itemAt(loc) and self.playlist.removeMedia(index):
+            mediapath = self.playlist.currentMedia().canonicalUrl().fileName()
+            curmedia = self.get_filename(mediapath)
             database.delete_audio(curmedia)
+            print(self.all_audios)
             self.all_audios.remove(curmedia)
             # Next, removing from the GUI list
             self.ui_song_list.takeItem(index)
@@ -253,7 +271,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         filetypes = [('mp3 files', '*.mp3'), ('wav files', '*.wav')]  # Only audio should pe added
         audios_list = filedialog.askopenfilenames(title='Choose audio files', filetypes=filetypes)
         for audio_path in audios_list:
-            audio_name = self.convert_filename(audio_path)
+            audio_name = self.get_filename(audio_path)
             self.all_audios.append(audio_name)
             self.add_to_playlist(audio_path)
             # Updating
@@ -293,7 +311,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         # self.volume_label.setText("Volume")
 
     @staticmethod
-    def convert_filename(path):
+    def get_filename(path):
         ''' Converts file path to file name without extension '''
         pathpart, ext = os.path.splitext(path)  # taking only the audio path without the extension
         audio_name = os.path.basename(pathpart)
