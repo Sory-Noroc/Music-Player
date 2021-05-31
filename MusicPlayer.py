@@ -55,6 +55,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.player.mediaStatusChanged.connect(self.status_changed)
         self.player.stateChanged.connect(self.state_changed)
         self.player.positionChanged.connect(self.position_changed)
+        self.playlist.currentMediaChanged.connect(self.media_changed)
         self.player.setVolume(60)
         self.player.setPlaylist(self.playlist)
         self.state = None  # -1 -> stopped; 0 -> paused; 1 -> playing;
@@ -85,6 +86,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.ui_song_list = QtWidgets.QListWidget(self.centralwidget)
 
         self.current_audio = ''  # To prevent errors when trying to play nothing
+        self.playlist.setPlaybackMode(3)
         self.retranslate_ui(self)
         QtCore.QMetaObject.connectSlotsByName(self)
 
@@ -155,6 +157,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         size.setHeight(100)
         item.setSizeHint(size)
         list_widget.addItem(item)
+        return item
 
     def open_menu(self, pos):
         menu = QtWidgets.QMenu()
@@ -164,6 +167,11 @@ class UiMainWindow(QtWidgets.QMainWindow):
         menu.addAction(delete)
         delete.triggered.connect(self.delete_audio)
         menu.exec_(self.ui_song_list.mapToGlobal(pos))
+
+    def media_changed(self):
+        ''' Playlist signal triggered when the media playing is changed '''
+        url = self.playlist.currentMedia().canonicalUrl().url()
+        self.ui_song_list.setCurrentItem()
 
     def status_changed(self, *args, **kwargs):
         ''' Signal method triggered when the player status changes ex. noMedia -> Media '''
@@ -205,20 +213,19 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.audio_widgets = self.ui_song_list.findItems('', QtCore.Qt.MatchContains)
         song_path_zip = zip(self.audio_widgets, paths)
         # self.all_audios = list(map(lambda x: x.text(), self.audio_widgets))  # Extracting audio names
-        self.all_audios = {k.text():v for k,v in song_path_zip}
+        self.all_audios = {k:v for k,v in song_path_zip}
 
     def delete_audio(self, loc):
         '''Removes the audio from the ui, all_audios and database'''
         self.player.stop()
-        index = self.ui_song_list.currentRow() - 1
+        index = self.ui_song_list.currentRow()
         print('remove index ', index)
-        if self.playlist.removeMedia(index):
+        if self.playlist.removeMedia(index+1):
             curmedia = self.ui_song_list.currentItem().text()
-            mediapath = self.all_audios[curmedia]
             database.delete_audio(curmedia)
-            print(self.all_audios.keys())
-            print(curmedia)
-            self.all_audios.pop(curmedia)
+            print('current media:', curmedia)
+            # Here, we remove the selected media from the all_audios dictionary
+            self.all_audios = {k:v for k,v in self.audios if not k.text() == curmedia}
             # Next, removing from the GUI list
             self.ui_song_list.takeItem(index)
 
@@ -229,8 +236,10 @@ class UiMainWindow(QtWidgets.QMainWindow):
         print('current:', current_audio)
         self.player.stop()  
         audio_index = self.ui_song_list.currentIndex().row()
-        print('index:', audio_index)         
+        print('index:', audio_index) 
+        print('playlist count: ', self.playlist.mediaCount())        
         self.playlist.setCurrentIndex(audio_index)
+        print(self.playlist.currentMedia().canonicalUrl().url())
         self.player.play()
 
     def play_pause_song(self, *args, **kwargs):
@@ -275,10 +284,10 @@ class UiMainWindow(QtWidgets.QMainWindow):
         audios_list = filedialog.askopenfilenames(title='Choose audio files', filetypes=filetypes)
         for audio_path in audios_list:
             audio_name = self.get_filename(audio_path)
-            self.all_audios[audio_name] = audio_path
             self.add_to_playlist(audio_path)
             # Updating
-            self.add_image(self.ui_song_list, audio_name, self.icon)
+            ui_list_item = self.add_image(self.ui_song_list, audio_name, self.icon)
+            self.all_audios[ui_list_item] = audio_path
             database.insert_in_table((audio_name, audio_path))  # Inserting the audio
 
     def slider_moved(self, pos, *args, **kwargs):
