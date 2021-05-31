@@ -55,7 +55,6 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.player.mediaStatusChanged.connect(self.status_changed)
         self.player.stateChanged.connect(self.state_changed)
         self.player.positionChanged.connect(self.position_changed)
-        self.playlist.currentMediaChanged.connect(self.media_changed)
         self.player.setVolume(60)
         self.player.setPlaylist(self.playlist)
         self.state = None  # -1 -> stopped; 0 -> paused; 1 -> playing;
@@ -140,6 +139,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         #Right-click menu
         self.ui_song_list.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.ui_song_list.customContextMenuRequested.connect(self.open_menu)
+        self.playlist.currentMediaChanged.connect(self.media_changed)
         self.centralframe.addWidget(self.ui_song_list)  # Adding the audio list widget to the interface
         self.get_saved_music()  # Adding all the previously saved music
         self.show()
@@ -168,10 +168,15 @@ class UiMainWindow(QtWidgets.QMainWindow):
         delete.triggered.connect(self.delete_audio)
         menu.exec_(self.ui_song_list.mapToGlobal(pos))
 
-    def media_changed(self):
-        ''' Playlist signal triggered when the media playing is changed '''
-        url = self.playlist.currentMedia().canonicalUrl().url()
-        self.ui_song_list.setCurrentItem()
+    def media_changed(self, content):
+        ''' Playlist signal triggered when the media playing is changed 
+            content -> QMediaContent '''
+        url = content.canonicalUrl().toString()
+        url = url[0].capitalize() + url[1:]  # The 'C:' in the path is in lowecase
+        # QMediaContent().canonicalUrl().toString()
+        print(self.all_audios)
+        print('url:', url)
+        self.ui_song_list.setCurrentItem(self.all_audios[url])
 
     def status_changed(self, *args, **kwargs):
         ''' Signal method triggered when the player status changes ex. noMedia -> Media '''
@@ -211,7 +216,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
                 self.add_to_playlist(path)
         # Updating
         self.audio_widgets = self.ui_song_list.findItems('', QtCore.Qt.MatchContains)
-        song_path_zip = zip(self.audio_widgets, paths)
+        song_path_zip = zip(paths, self.audio_widgets)
         # self.all_audios = list(map(lambda x: x.text(), self.audio_widgets))  # Extracting audio names
         self.all_audios = {k:v for k,v in song_path_zip}
 
@@ -225,7 +230,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
             database.delete_audio(curmedia)
             print('current media:', curmedia)
             # Here, we remove the selected media from the all_audios dictionary
-            self.all_audios = {k:v for k,v in self.audios if not k.text() == curmedia}
+            self.all_audios = {k:v for k,v in self.audios if not v.text() == curmedia}
             # Next, removing from the GUI list
             self.ui_song_list.takeItem(index)
 
@@ -287,7 +292,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
             self.add_to_playlist(audio_path)
             # Updating
             ui_list_item = self.add_image(self.ui_song_list, audio_name, self.icon)
-            self.all_audios[ui_list_item] = audio_path
+            self.all_audios[audio_path] = ui_list_item
             database.insert_in_table((audio_name, audio_path))  # Inserting the audio
 
     def slider_moved(self, pos, *args, **kwargs):
