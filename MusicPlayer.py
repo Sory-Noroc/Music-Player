@@ -225,18 +225,19 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.player.stop()
         index = self.ui_song_list.currentRow()
         print('remove index ', index)
-        if self.playlist.removeMedia(index+1):
+        if self.playlist.removeMedia(index):
             curmedia = self.ui_song_list.currentItem().text()
             database.delete_audio(curmedia)
             print('current media:', curmedia)
             # Here, we remove the selected media from the all_audios dictionary
-            self.all_audios = {k:v for k,v in self.audios if not v.text() == curmedia}
+            self.all_audios = {k:v for k,v in self.all_audios.items() if not v.text() == curmedia}
             # Next, removing from the GUI list
             self.ui_song_list.takeItem(index)
 
     def audio_clicked(self, selected_audio, *args, **kwargs):
         '''This is called when a song is clicked'''
         self.state = 1
+        print('playlist i', self.playlist.currentIndex())
         current_audio = selected_audio.text()  # Setting the new audio
         print('current:', current_audio)
         self.player.stop()  
