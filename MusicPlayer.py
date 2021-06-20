@@ -11,32 +11,10 @@ from time import sleep
 from datetime import timedelta
 from sqldb import Database
 
-QMediaPlayer = QtMultimedia.QMediaPlayer
-QMediaPlaylist = QtMultimedia.QMediaPlaylist
-QMediaContent = QtMultimedia.QMediaContent
+QMP = QtMultimedia.QMediaPlayer
+QMPL = QtMultimedia.QMediaPlaylist
+QMC = QtMultimedia.QMediaContent
 
-
-# class ListWidget(QtWidgets.QListWidget):
-#     ''' Class for the modified list widget, that is able to respond to right clicks '''
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-
-#     def contextMenuEvent(self, event: QtGui.QContextMenuEvent):
-#         self.menu = QtWidgets.QMenu(self)
-#         renameAction = QtWidgets.QAction('Remove', self)
-#         renameAction.triggered.connect(lambda: self.remove(event))
-#         self.menu.addAction(renameAction)
-#         # add other required actions
-#         self.menu.popup(QtGui.QCursor.pos())
-#         # return super().contextMenuEvent(a0)
-
-#     def remove(self, event, *args, **kwargs):
-#         '''Removes the audio from the ui, all_audios and database'''
-
-#         # row = self.rowAt(event.pos().y())
-#         index = self.indexFromItem(self.itemAt(event.pos().x(), event.pos().y())).row()
-#         print('remove index: ', index)
-#         ui.delete_audio(index)  # To finish the deletion from the ui and database
 
 class UiMainWindow(QtWidgets.QMainWindow):
     ''' Main class that builds the music player'''
@@ -50,8 +28,8 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.setWindowFlags(QtCore.Qt.WindowCloseButtonHint | QtCore.Qt.WindowMinimizeButtonHint)
 
         # Initiating the music player
-        self.player = QMediaPlayer()
-        self.playlist = QMediaPlaylist(self.player)
+        self.player = QMP()
+        self.playlist = QMPL(self.player)
         self.player.mediaStatusChanged.connect(self.status_changed)
         self.player.stateChanged.connect(self.state_changed)
         self.player.positionChanged.connect(self.position_changed)
@@ -173,7 +151,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
             content -> QMediaContent '''
         url = content.canonicalUrl().toString()
         url = url[0].capitalize() + url[1:]  # The 'C:' in the path is in lowecase
-        # QMediaContent().canonicalUrl().toString()
+        # QMC().canonicalUrl().toString()
         print(self.all_audios)
         print('url:', url)
         self.ui_song_list.setCurrentItem(self.all_audios[url])
@@ -202,7 +180,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
     def add_to_playlist(self, audio_path, *args, **kwargs):
         ''' Adds the audio with the given path to the playlist '''
-        media = QMediaContent(QtCore.QUrl(audio_path))
+        media = QMC(QtCore.QUrl(audio_path))
         self.playlist.addMedia(media)
 
     def get_saved_music(self, *args, **kwargs):
@@ -253,7 +231,7 @@ class UiMainWindow(QtWidgets.QMainWindow):
         if not self.player.currentMedia():  # If no audio is chosen, just the first one
             self.default_song()  # This calls/plays the first audio
         else:
-            if self.player.state() == QMediaPlayer.PlayingState:  # If any sound is playing
+            if self.player.state() == QMP.PlayingState:  # If any sound is playing
                 self.player.pause()
                 self.state = 0
                 self.play_pause_button.setText('Play')  # Button caption
