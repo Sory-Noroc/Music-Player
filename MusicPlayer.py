@@ -122,6 +122,11 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.get_saved_music()  # Adding all the previously saved music
         self.show()
 
+    def get_audio(self):
+        """ Getter for self.ui_song_list audio items """
+        return list(map(lambda x: x.text(),
+            self.ui_song_list.findItems('', QtCore.Qt.MatchContains)))
+
     def set_box_frame(self, frame, *args, **kwargs):
         '''For creating the main frames'''
         widget = QtWidgets.QWidget()
@@ -228,18 +233,20 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
     def play_pause_song(self, *args, **kwargs):
         '''The event for the 'Pause' button'''
+
         if not self.player.currentMedia():  # If no audio is chosen, just the first one
             self.default_song()  # This calls/plays the first audio
-        else:
-            if self.player.state() == QMP.PlayingState:  # If any sound is playing
-                self.player.pause()
-                self.state = 0
-                self.play_pause_button.setText('Play')  # Button caption
+            return None
 
-            else:
-                self.play_pause_button.setText('Pause')  # Button caption
-                self.state = 1
-                self.player.play()
+        if self.player.state() == QMP.PlayingState:  # If any sound is playing
+            self.player.pause()
+            self.state = 0
+            self.play_pause_button.setText('Play')  # Button caption
+
+        else:
+            self.play_pause_button.setText('Pause')  # Button caption
+            self.state = 1
+            self.player.play()
 
     def stop_song(self, *args, **kwargs):
         '''Stops the current playing audio'''
@@ -268,6 +275,10 @@ class UiMainWindow(QtWidgets.QMainWindow):
         audios_list = filedialog.askopenfilenames(title='Choose audio files', filetypes=filetypes)
         for audio_path in audios_list:
             audio_name = self.get_filename(audio_path)
+            here = self.get_audio()
+            if audio_name in self.get_audio():
+                # Skip adding any duplicate audios
+                continue
             self.add_to_playlist(audio_path)
             # Updating
             ui_list_item = self.add_image(self.ui_song_list, audio_name, self.icon)
