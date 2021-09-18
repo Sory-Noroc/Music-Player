@@ -49,7 +49,8 @@ class UiMainWindow(QtWidgets.QMainWindow):
         timer_frame = QtWidgets.QHBoxLayout()
         volume_frame = QtWidgets.QHBoxLayout()
 
-        self.play_pause_button = QtWidgets.QPushButton(self.centralwidget)
+        self.play_button = QtWidgets.QPushButton(self.centralwidget)
+        self.pause_button = QtWidgets.QPushButton(self.centralwidget)
         self.stop_button = QtWidgets.QPushButton(self.centralwidget)
         self.add_new_song_button = QtWidgets.QPushButton(self.centralwidget)
         self.restart_button = QtWidgets.QPushButton(self.centralwidget)
@@ -75,7 +76,8 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.set_box_frame(timer_frame)
 
         # Linking functions to each button
-        self.play_pause_button.clicked.connect(self.play_pause_song)
+        self.play_button.clicked.connect(self.play_song)
+        self.pause_button.clicked.connect(self.pause_song)
         self.stop_button.clicked.connect(self.stop_song)
         self.add_new_song_button.clicked.connect(self.add_song)
         self.restart_button.clicked.connect(self.restart_song)
@@ -86,7 +88,8 @@ class UiMainWindow(QtWidgets.QMainWindow):
         button_frame.addWidget(self.add_new_song_button)
         button_frame.addWidget(self.stop_button)
         button_frame.addWidget(self.previous_button)
-        button_frame.addWidget(self.play_pause_button)
+        button_frame.addWidget(self.play_button)
+        button_frame.addWidget(self.pause_button)
         button_frame.addWidget(self.next_button)
         button_frame.addWidget(self.restart_button)
 
@@ -231,28 +234,27 @@ class UiMainWindow(QtWidgets.QMainWindow):
         print(self.playlist.currentMedia().canonicalUrl().url())
         self.player.play()
 
-    def play_pause_song(self, *args, **kwargs):
-        '''The event for the 'Pause' button'''
+    def play_song(self, *args, **kwargs):
+        '''The event for the 'Play' button'''
 
         if not self.player.currentMedia():  # If no audio is chosen, just the first one
             self.default_song()  # This calls/plays the first audio
             return None
 
-        if self.player.state() == QMP.PlayingState:  # If any sound is playing
+        if self.player.state() != QMP.PlayingState:  # If any sound is playing
+            self.player.play()
+            self.state = 1
+
+    def pause_song(self, *args, **kwargs):
+        """ The callback function for the Pause button """
+        if self.player.state() == QMP.PlayingState:
             self.player.pause()
             self.state = 0
-            self.play_pause_button.setText('Play')  # Button caption
-
-        else:
-            self.play_pause_button.setText('Pause')  # Button caption
-            self.state = 1
-            self.player.play()
 
     def stop_song(self, *args, **kwargs):
         '''Stops the current playing audio'''
         self.state = 0
         self.player.stop()
-        self.play_pause_button.setText('Play')  # 'Play' button caption
 
     def previous_song(self, *args, **kwargs):
         '''Plays the previous song, in the order it was added'''
@@ -307,7 +309,8 @@ class UiMainWindow(QtWidgets.QMainWindow):
         ''' Setting the text for all the buttons and labels '''
         main_window.setCentralWidget(self.centralwidget)
         main_window.setWindowTitle("MP3 Player")
-        self.play_pause_button.setText("Play")
+        self.play_button.setText("Play")
+        self.pause_button.setText("Pause")
         self.stop_button.setText("Stop")
         self.add_new_song_button.setText("Add Songs")
         self.restart_button.setText("Restart")
