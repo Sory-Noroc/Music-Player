@@ -47,7 +47,6 @@ class UiMainWindow(QtWidgets.QMainWindow):
 
         button_frame = QtWidgets.QHBoxLayout()
         timer_frame = QtWidgets.QHBoxLayout()
-        volume_frame = QtWidgets.QHBoxLayout()
 
         self.play_button = QtWidgets.QPushButton(self.centralwidget)
         self.pause_button = QtWidgets.QPushButton(self.centralwidget)
@@ -71,7 +70,6 @@ class UiMainWindow(QtWidgets.QMainWindow):
         self.centralframe.addWidget(self.title)
         self.title.setFont(QtGui.QFont('Arial', 20))
         self.title.setAlignment(QtCore.Qt.AlignCenter)
-        self.set_box_frame(volume_frame)
         self.set_box_frame(button_frame)
         self.set_box_frame(timer_frame)
 
@@ -93,13 +91,6 @@ class UiMainWindow(QtWidgets.QMainWindow):
         button_frame.addWidget(self.next_button)
         button_frame.addWidget(self.restart_button)
 
-        self.volume_slider.setMinimum(0)
-        self.volume_slider.setMaximum(100)
-        self.volume_slider.setValue(100)
-        volume_frame.addWidget(self.volume_slider, alignment=QtCore.Qt.AlignLeft)
-        self.volume_slider.setOrientation(QtCore.Qt.Horizontal)
-        self.volume_slider.valueChanged.connect(self.set_volume)
-
         self.time_slider.setMinimum(0)
         self.time_slider.setMaximum(100)
         self.time_slider.setValue(0)
@@ -109,6 +100,13 @@ class UiMainWindow(QtWidgets.QMainWindow):
         timer_frame.addWidget(self.time_label)
         timer_frame.addWidget(self.time_slider)
         timer_frame.addWidget(self.time_length_label)
+
+        self.volume_slider.setMinimum(0)
+        self.volume_slider.setMaximum(100)
+        self.volume_slider.setValue(100)
+        self.volume_slider.setOrientation(QtCore.Qt.Horizontal)
+        self.volume_slider.valueChanged.connect(self.set_volume)
+        self.volume_slider.move(10, 10)
 
         icon_path = os.path.join('.', 'images/note.png')
         self.icon = QtGui.QIcon(icon_path)
